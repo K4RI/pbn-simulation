@@ -1,0 +1,102 @@
+----------- (S) LECTURE DE 'Table0_p08.bnet'
+À distances de Hamming [0, 0, 0] près :
+                         Fréquence
+00000000000000000000000        7.7
+00110000000001000010000       55.8
+10001100110000010100000       36.5
+
+
+----------- (A) LECTURE DE 'Table0_p08.bnet'
+À distances de Hamming [0, 0, 0] près :
+                         Fréquence
+00000000000000000000000        3.2
+00110000000001000010000       48.5
+10001100110000010100000       48.3
+
+
+----------- (S) LECTURE DE 'Table1A_fAll_d1_p08.bnet'
+À distances de Hamming [2, 4, 2] près :
+                         Fréquence
+00000000000000000000000        0.5
+00110000000001000010000       28.6
+10001100110000010100000       70.9
+
+
+----------- (A) LECTURE DE 'Table1A_fAll_d1_p08.bnet'
+À distances de Hamming [5, 5, 3] près :
+                         Fréquence
+00000000000000000000000        9.5
+00110000000001000010000       40.7
+10001100110000010100000       49.8
+
+
+----------- (S) LECTURE DE 'Table1B_fAll_d1_p08_siblings.bnet'
+À distances de Hamming [0, 3, 3] près :
+                         Fréquence
+00110000000001000010000       28.9
+10001100110000010100000       71.1
+
+
+----------- (A) LECTURE DE 'Table1B_fAll_d1_p08_siblings.bnet'
+À distances de Hamming [5, 5, 2] près :
+                         Fréquence
+00000000000000000000000        8.7
+00110000000001000010000       43.5
+10001100110000010100000       47.8
+
+
+----------- (S) LECTURE DE 'Table1C_fGATA3_p08.bnet'
+À distances de Hamming [0, 0, 0] près :
+                         Fréquence
+00110000000001000010000      100.0
+
+
+----------- (A) LECTURE DE 'Table1C_fGATA3_p08.bnet'
+À distances de Hamming [0, 0, 0] près :
+                         Fréquence
+00000000000000000000000       74.8
+00110000000001000010000       25.2
+
+
+----------- (S) LECTURE DE 'Table1D_fTbet_p08.bnet'
+À distances de Hamming [0, 0, 0] près :
+                         Fréquence
+00000000000000000000000       22.9
+00110000000001000010000       77.1
+
+
+----------- (A) LECTURE DE 'Table1D_fTbet_p08.bnet'
+À distances de Hamming [0, 0, 0] près :
+                         Fréquence
+00000000000000000000000       88.1
+00110000000001000010000       11.9
+
+
+----------- (S) LECTURE DE 'Table1E_fIL4_p08.bnet'
+À distances de Hamming [0, 1, 0] près :
+                         Fréquence
+00110000000001000010000       96.7
+10001100110000010100000        3.3
+
+
+----------- (A) LECTURE DE 'Table1E_fIL4_p08.bnet'
+À distances de Hamming [0, 1, 0] près :
+                         Fréquence
+00000000000000000000000       17.2
+00110000000001000010000       23.5
+10001100110000010100000       59.3
+
+
+----------- (S) LECTURE DE 'Table1F_fIL4R_p08.bnet'
+À distances de Hamming [0, 0, 0] près :
+                         Fréquence
+00110000000001000010000       74.0
+10001100110000010100000       26.0
+
+
+----------- (A) LECTURE DE 'Table1F_fIL4R_p08.bnet'
+À distances de Hamming [0, 0, 0] près :
+                         Fréquence
+00000000000000000000000       14.4
+00110000000001000010000       23.6
+10001100110000010100000       62.0

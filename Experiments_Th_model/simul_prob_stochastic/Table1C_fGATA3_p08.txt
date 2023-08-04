@@ -1,0 +1,4 @@
+Total runs:  1000 
+# runs Th0:  719 ( 71.9 %) 
+# runs Th1:  281 ( 28.1 %) 
+# runs Th2:  0 ( 0.0 %) 

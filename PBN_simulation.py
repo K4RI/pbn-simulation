@@ -942,16 +942,22 @@ def test_claudine():
 
 ##
 
-def generateRandomNKNetwork(n, k, sync, p=0):
-    """Construit un BN dont chacun des n nœuds est régulé par k voisins
-    et une fonction à table de vérité générée aléatoirement.
+def generateBN(n, k, sync, v=False, f=False, p=0):
+    """Construit un BN dont chacun des n nœuds est régulé par k voisins ou moins.
 
     Parameters
     ----------
     n : int
-        Nombre de bits décrivant un état du PBN.
+        Nombre de bits décrivant un état du BN.
     k : int
         Nombre de voisins de chaque bit/gène dans le graphe de régulation.
+    v : bool
+        Si False, tous les gènes ont k voisins.
+        Si True, le nombre de voisins de chaque gène est tiré entre 0 et k.
+    f : bool
+        Si False, les tables de vérité sont tirées au hasard.
+        Si True, on tire des vecteurs de régulation +/-, et la fonction de
+        régulation est celle par défaut (cf. Mendoza2006 équation 1).
     args :
         Attributs du PBN décrits plus haut.
 
@@ -959,18 +965,43 @@ def generateRandomNKNetwork(n, k, sync, p=0):
     -------
     PBN
     """
+    #TODO : option canalyzing functions (x_i=u => f(x)=y) : f(x) = x_i ^/v h(x) ?
+
+    if v:
+        kk = [random.randint(0,k) for _ in range(n)]
+    else:
+        kk = [k for _ in range(n)]
 
     nodes = [i for i in range(n)]
     # Sélection de k voisins pour chaque gène
-    neighs = [sorted(random.sample(nodes, k)) for _ in range(n)]
+    neighs = [sorted(random.sample(nodes, kk[i])) for i in range(n)]
     for i in nodes:
         print('%s -> %i' %(neighs[i], i))
 
     # Pour chaque gène i de voisins i1 ... ik,
-    # une table de vérité aléatoire pour la fonction x_i1 ... x_ik -> x_i
-    T = [np.random.choice([0, 1], size=(2**k,)) for _ in range(n)]
-    fun = lambda i: lambda x: T[i][sum([x[neighs[i][j]]*2**j for j in range(k)])]
-    functs = [[fun(i) for i in range(n)]]
+    if f:
+        # Détermination des régulations négatives et positives
+        p = .5 # TODO: une proportion de régulations négatives ?
+        signs = [[random.random()<p for _ in range(kk[i])] for i in range(n)]
+
+        # Calcul de la fonction par défaut
+        functs = []
+        for i in range(n):
+            activators = [neighs[i][j] for j in range(kk[i]) if signs[i][j]]
+            inhibitors = [neighs[i][j] for j in range(kk[i]) if (not signs[i][j])]
+            if not activators:
+                functs.append(lambda x: not(any([x[k] for k in inhibitors])))
+            elif not inhibitors:
+                functs.append(lambda x: any([x[k] for k in activators]))
+            else:
+                functs.append(lambda x: any([x[k] for k in activators]) and not(any([x[k] for k in inhibitors])))
+
+    else:
+        # Une table de vérité aléatoire pour la fonction x_i1 ... x_ik -> x_i
+        T = [np.random.choice([0, 1], size=(2**kk[i],)) for i in range(n)]
+        fun = lambda i: lambda x: T[i][sum([x[neighs[i][j]]*2**j for j in range(k)])]
+        functs = [[fun(i) for i in range(n)]]
+
     return PBN(title = f'Synthetic ({n},{k})-BN',
                n=n,
                indep=False,
@@ -1000,6 +1031,7 @@ def generate_Random_PBN(m, n, k, indep, sync=True, p=0, q=.1):
     -------
     PBN
     """
+    #TODO: le PBN a en argument un BN, les gènes à étendre, la distance dans le diagramme de Hasse
 
     if k>n:
         raise ValueError("Merci d'entrer un k<n.")
@@ -1092,11 +1124,10 @@ def tests():
 
 tests()
 
-#TODO : prendre une fiche d'instructions, créer un GitHub
 
-#TODO : option canalyzing functions (x_i=u => f(x)=y) : f(x) = x_i ^/v h(x)
+#TODO : prendre une fiche d'instructions
+
 #TODO : generatePBN_Hasse avec le code de Pedro et Py4J
-
 #TODO : autre version du code avec appels Py4J sur le getAttractors de BioLQM
 
 #TODO : rédiger la démo sur |BOA| merde

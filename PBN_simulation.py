@@ -12,6 +12,7 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 import random
+from typing import Any, Callable
 
 
 
@@ -56,13 +57,33 @@ def Hamming(x: list, y: list) -> int:
     """Renvoie la distance de Hamming entre deux mots binaires."""
     return len([i for i in range(len(x)) if x[i] != y[i]])
 
+
 def prod(L: list) -> int:
     """Renvoie le produit des termes d'une liste."""
     if not L: return 1
     return L[0] * prod(L[1:])
 
 
-def fct_to_clauseDNF(fct: int, neigh_states_i: list, neighs_i: list) -> str:
+def fct_to_clauseDNF(fct: Callable[[list], int], neigh_states_i: list,
+                     neighs_i: list, varnames: list) -> str:
+    """Transforme une fonction booléenne en son DNF.
+
+    Parameters
+    ----------
+    fct : function
+        Fonction booléenne.
+    neigh_states_i: list
+        Combinaisons possibles des voisins du gène.
+    neighs_i : list
+        Nombre de voisins du gène.
+    varnames: list
+        Noms des gènes.
+
+    Returns
+    -------
+    str
+        La DNF de la fonction booléenne.
+    """
 
     clauses = []
     for antec in neigh_states_i:
@@ -70,17 +91,37 @@ def fct_to_clauseDNF(fct: int, neigh_states_i: list, neighs_i: list) -> str:
             litts = []
             for ind in neighs_i:
                 if antec[ind]:
-                    litts.append(f'x{ind}')
+                    litts.append(f'{varnames[ind]}')
                 if not antec[ind]:
-                    litts.append(f'!x{ind}')
+                    litts.append(f'!{varnames[ind]}')
             clauses.append('(' + ' & '.join(litts) + ')')
     return ' | '.join(clauses)
 
 
 def clause_to_fct(factors: str, targets: dict) -> str:
+    """Transforme l'expression d'une fonction booléenne en une chaîne de
+        caractères correspondante évaluable par Python.
+
+    Parameters
+    ----------
+    factors : str
+        Fonction booléenne.
+    targets : dict
+        Dictionnaire associant chaque nom de gène à son indice.
+
+    Returns
+    -------
+    str
+        La chaîne de caractères.
+    """
+
     targs = list(targets.keys())
+    vois = []
     for y in sorted(targs, key = len, reverse = True):
-        factors = factors.replace(str(y), 'x[%s]' %targets[y])
+        factors_1 = factors.replace(str(y), 'x[%s]' %targets[y])
+        if factors_1 != factors:
+            vois.append(targets[y])
+        factors = factors_1
 
     # Remplacement des '!(...)' par des '(not ...)'
     while '!' in factors:
@@ -100,7 +141,7 @@ def clause_to_fct(factors: str, targets: dict) -> str:
                     cpt_par-=1
             factors = fac0 + '(not ' + fac1[:i] + '])' + fac2[i:]
 
-    return factors
+    return factors, vois
 
 
 ########### PARTIE 2/3 - CLASSE 'PBN' ##########
@@ -161,6 +202,8 @@ class PBN:
         Probabilité de perturber un bit.
     q : float
         Probabilité de changer de fonction.
+    varnames : list
+        Liste des noms de variables
 
 
     Methods
@@ -178,7 +221,7 @@ class PBN:
     """
 
 
-    def __init__(self, n, indep, f, c, sync, p, q, title = '',
+    def __init__(self, n, indep, f, c, sync, p, q, title = '', varnames = [],
                 zeroes = [], ones = [], regulation = ()):
         """Crée un objet de type PBN, dont l'état x
         Parameters
@@ -209,6 +252,9 @@ class PBN:
         self.n = n
         if type(n) != int or n <= 0:
             raise TypeError('n doit être un entier strictement positif.')
+
+        # # Le nom de chaque gène
+        self.varnames = varnames
 
         # # Les marginales de la fonction de transition sont-elles indépendantes
         self.indep = indep
@@ -296,12 +342,21 @@ class PBN:
         else:
             s_sync = 'asynchrone'
 
+        if self.varnames:
+            s_varnames = '\n' + ' - '.join(self.varnames)
+        else:
+            s_varnames = '\n'
+
         if self.indep:
             s_ind = 'à tirages indépendants'
             s_fcts = ''
             for i in range(self.n):
-                s_fcts += 'x%i - %i fonctions possibles\n' \
-                          %(i, len(self.fcts[i]))
+                if self.varnames:
+                    s_fcts += 'x%i (%s) - %i fonctions possibles\n' \
+                              %(i, self.varnames[i], len(self.fcts[i]))
+                else:
+                    s_fcts += 'x%i - %i fonctions possibles\n' \
+                              %(i, len(self.fcts[i]))
         else:
             s_ind = ''
             s_fcts = '%i contextes' %len(self.fcts)
@@ -335,8 +390,8 @@ Fonctions de transition :
 
 Contexte actuel : %s
 %s======================================''' \
-%(self.title, s_type, s_sync, s_ind, self.n, self.p, self.q, s_fcts, s_ctxtbls,
-str(self.c), str(self.x), s_ctxt, s_ctxtbl)
+%(self.title, s_type, s_sync, s_ind, self.n, self.p, self.q,
+s_fcts, s_ctxtbls, str(self.c), str(self.x), s_ctxt, s_ctxtbl)
 
 
     def copy_PBN(self, title = None, n = None, indep = None, fcts = None,
@@ -965,21 +1020,28 @@ str(self.c), str(self.x), s_ctxt, s_ctxtbl)
 
             f.write('targets, factors\n')
 
+            if self.varnames:
+                varnames = self.varnames
+            else:
+                varnames = [f'x{i}' for i in range(self.n)]
+
             if len(self.regulation)==2 and (not self.pbn):
-                # BN signé : fonction par défaut
+                # BN signé : fonction par défaut, on connaît les formules
                 activators, inhibitors = self.regulation
                 for i in range(self.n):
                     s_activ = " | ".join(['x'+str(j) for j in activators[i]])
                     s_inhib = " | ".join(['x'+str(j) for j in inhibitors[i]])
 
                     if not activators[i]:
-                        f.write(f'x{i}, ! ({s_inhib})\n')
+                        f.write(f'{varnames[i]}, ! ({s_inhib})\n')
                     elif not inhibitors[i]:
-                        f.write(f'x{i}, {s_activ}\n')
+                        f.write(f'{varnames[i]}, {s_activ}\n')
                     else:
-                        f.write(f'x{i}, ({s_activ}) & ! ({s_inhib})\n')
+                        f.write(f'{varnames[i]}, ({s_activ}) & ! ({s_inhib})\n')
 
             else:
+                # sinon, on simule toutes les combinaisons de voisins.
+
                 if len(self.regulation)==0:
                     # on ne connaît pas la régulation...
                     neighs = [[i for i in range(self.n)] for _ in range(self.n)]
@@ -993,8 +1055,10 @@ str(self.c), str(self.x), s_ctxt, s_ctxtbl)
                     # BN ou PBN à régulation non-signée
                     neighs = self.regulation[0]
 
+                # Liste des états à simuler
                 neigh_states = []
                 for i in range(self.n):
+                    # Pour i : les combinaisons d'activation de ses voisins
                     k = len(neighs[i])
                     L = list(map(list, itertools.product([0, 1], repeat = k)))
                     vois_i = []
@@ -1006,123 +1070,30 @@ str(self.c), str(self.x), s_ctxt, s_ctxtbl)
                         vois_i.append(y)
                     neigh_states.append(vois_i)
 
-                if self.indep:
+                if self.indep: # indépendant : gène par gène
                     for i in range(self.n):
                         for (fct, w) in zip(self.fcts[i], self.c[i]):
-                            f.write(f'x{i}, ')
-                            s = fct_to_clauseDNF(fct, neigh_states[i], neighs[i])
+                            f.write(f'{varnames[i]}, ')
+                            s = fct_to_clauseDNF(fct, neigh_states[i], neighs[i],
+                                                 varnames)
                             f.write(s)
                             f.write(f', {w}\n')
                         f.write('\n')
 
-                else:
+                else: # non-indépendant : contexte par contexte
                     for j in range(self.m):
-                        f.write(f'w = {self.c[j]}\n')
+                        if self.m > 1:
+                            f.write(f'w = {self.c[j]}\n')
                         for i in range(self.n):
-                            f.write(f'x{i}, ')
-                            s = fct_to_clauseDNF(self.fcts[j][i], neigh_states[i], neighs[i])
+                            f.write(f'{varnames[i]}, ')
+                            s = fct_to_clauseDNF(self.fcts[j][i], neigh_states[i],
+                                                 neighs[i], varnames)
                             f.write(f'{s}\n')
                         f.write('\n')
             f.close()
 
 
 
-########### PARTIE 3/3 - SIMULATIONS D'EXEMPLES ET GÉNÉRATEURS ##########
-
-def ex_toymodel():
-    """Toy model présenté dans l'article d'AbouJaoudé2006."""
-    f0 = lambda x: x[1] | x[3]
-    f1 = lambda x: (x[0] & x[3]) | x[2]
-    f2 = lambda x: (not x[0]) & (not x[3])
-    f3 = lambda x: x[3]
-
-    toymodel = PBN(title = 'Toy model',
-                   n = 4,
-                   indep = False,
-                   f = [[f0, f1, f2, f3]],
-                   c = [1],
-                   sync = True,
-                   p = 0,
-                   q = 0)
-    print(toymodel)
-    toymodel.simulation(8, verb = True)
-    toymodel.stationary_law()
-    toymodel.STG()
-    toymodel.copy_PBN(sync = False).STG()
-
-
-def ex_shmulevich2001():
-    """Toy model présenté dans l'article de Shmulevich2001."""
-    f0_0 = lambda x: x[1] | x[2]
-    f0_1 = lambda x: (x[1] | x[2]) & (not((not x[0]) & x[1] & x[2]))
-    f1_0 = lambda x: (x[0] | x[1] | x[2]) & (x[0] | (not x[1]) | (not x[2])) \
-                                          & ((not x[0]) | (not x[1]) | x[2])
-    f2_0 = lambda x: (x[0] & (x[1] | x[2])) | ((not x[0]) & x[1] & x[2])
-    f2_1 = lambda x: x[0] & x[1] & x[2]
-
-    examplePBN = PBN(title = 'Shmulevich PBN',
-                     n = 3,
-                     indep = True,
-                     f = [[f0_0, f0_1], [f1_0], [f2_0, f2_1]],
-                     c = [[0.6, 0.4], [1], [0.5, 0.5]],
-                     sync = True,
-                     p = 0,
-                     q = 1)
-    print(examplePBN)
-    # examplePBN.simulation(20, verb = False)
-    examplePBN.STG_PBN()
-    examplePBN.stationary_law()
-
-
-def ex_mammaliancellcycle():
-    """Modèle biologique étudié dans Fauré2006."""
-    f0 = lambda x: x[0]
-
-    f1 = lambda x: ((not x[4]) & (not x[9]) & (not x[0]) & (not x[3])) \
-                 | (x[5] & (not x[9]) & (not x[0]))
-
-    f2 = lambda x: ((not x[1]) & (not x[4]) & (not x[9])) \
-                 | (x[5] & (not x[1]) & (not x[9]))
-
-    f3 = lambda x: (x[2] & (not x[1]))
-
-    f4 = lambda x: (x[2] & (not x[1]) & (not x[6]) & (not (x[7] & x[8]))) \
-                 | (x[4] & (not x[1]) & (not x[6]) & (not (x[7] & x[8])))
-
-    f5 = lambda x: ((not x[0]) & (not x[3]) & (not x[4]) & (not x[9])) \
-                 | (x[5] & (not (x[3] & x[4])) & (not x[9]) &(not x[0]))
-
-    f6 = lambda x: x[9]
-
-    f7 = lambda x: ((not x[4]) & (not x[9])) | (x[6]) | (x[5] & (not x[9]))
-
-    f8 = lambda x: (not x[7]) | (x[7] & x[8] & (x[6] | x[4] | x[9]))
-
-    f9 = lambda x: (not x[6]) & (not x[7])
-
-    cellcycle = PBN(title = 'Mammalian cell cycle',
-                    n = 10,
-                    indep = False,
-                    f = [[f0, f1, f2, f3, f4, f5, f6, f7, f8, f9]],
-                    c = [1],
-                    sync = True,
-                    p = 0,
-                    q = 0)
-    # cellcycle.simulation(8, verb = True)
-    cellcycle.stationary_law(T = 200, N = 500, R = 500, show_all = False)
-
-    prio_attrs = ["1000100000", "1000101111", "1000001010", "1000000010",
-                  "1000000110", "1000000100", "1010000100", "1010100100",
-                  "1001100100", "1011100000", "1010100000", "1000100100",
-                  "1000001110", "1000100011", "1000101011", "1001100000",
-                  "1011000100", "1011100100"]
-
-    cellcycle.copy_PBN(sync = False)\
-             .stationary_law(T = 200, N = 500, R = 500, show_all = False,
-                             prio_attrs = prio_attrs)
-
-
-##
 
 def file_to_PBN(filename, title=None, sync = True, indep = True, p = 0, q = 1,
                 zeroes = [], ones = []):
@@ -1199,93 +1170,67 @@ def file_to_PBN(filename, title=None, sync = True, indep = True, p = 0, q = 1,
                     targets[target] = index
                     index += 1
 
+    n = len(targets)
+    neighs = [set() for _ in range(n)]
     # Parsing des fonctions et de leurs probabilités
     if indep:
-        functs = [[] for _ in range(len(targets))]
-        cs = [[] for _ in range(len(targets))]
+        functs = [[] for _ in range(n)]
+        cs = [[] for _ in range(n)]
         for line in lines:
             if line != '' and line[0] !='\n':
                 # Lecture de la ligne décrivant la fonction
                 target, factors, c = line.split(', ')
-                factors = clause_to_fct(factors, targets)
+                x = targets[target]
+                factors, vois = clause_to_fct(factors, targets)
+                neighs[x].update(vois)
 
                 # Conversion de la clause en fonction booléenne
-                x = targets[target]
                 functs[x].append(eval('lambda x: ' + factors))
                 cs[x].append(float(c))
 
     else:
         functs, cs = [], []
         start_flag = True
-        context = [0 for _ in range(len(targets))]
+        context = [0 for _ in range(n)]
         for line in lines:
             if line != '' and line[0] !='\n':
                 if line[:4] == 'w = ':
                     cs.append(float(line[4:]))
                     if not start_flag:
                         functs.append(context)
-                    context = [0 for _ in range(len(targets))]
+                    context = [0 for _ in range(n)]
                 else:
                     start_flag = False
                     target, factors = line.split(', ')
-                    factors = clause_to_fct(factors, targets)
-
                     x = targets[target]
+                    factors, vois = clause_to_fct(factors, targets)
+                    neighs[x].update(vois)
                     context[x] = eval('lambda x: ' + factors)
 
         functs.append(context)
         if cs == []:
             cs = [1]
 
+    varnames = [0 for _ in range(n)]
+    for (v, i) in targets.items():
+        varnames[i] = v
+    neighs = [sorted(neigh) for neigh in neighs]
+
     return PBN(title = title,
-               n = len(targets),
+               n = n,
                indep = indep,
                f = functs,
                c = cs,
                sync = sync,
                p = p,
                q = q,
+               varnames = varnames,
+               regulation = (neighs,),
                zeroes = zeroes, ones = ones)
 
 
 
-def test_claudine():
-    """Calcule la prévalence des attracteurs Th0 Th1 Th2 dans le modèle
-    Th_23, ainsi que dans ses extensions comportant les voisines des
-    fonctions de référence dans le diagramme de Hasse.
-    Cf. Cury2019, Mendoza2006."""
-
-    for name in ['Table0_p08.bnet',
-                 'Table1A_fAll_d1_p08.bnet',
-                 'Table1B_fAll_d1_p08_siblings.bnet',
-                 'Table1C_fGATA3_p08.bnet',
-                 'Table1D_fTbet_p08.bnet',
-                 'Table1E_fIL4_p08.bnet',
-                 'Table1F_fIL4R_p08.bnet']:
-
-        if name == 'Table0_p08.bnet':
-            filename = 'Experiments_Th_model\Table0_p08.bnet'
-            zeroes, ones = [-1, -2, -3, -4], []
-        else:
-            filename = "Experiments_Th_model\simul_prob_original\\" + name
-            zeroes, ones = [i for i in range(23) if i != 2], [2]
-
-        def approach_attrs(x):
-            if x[0] == '1':
-                return '10001100110000010100000', 2
-            if x[18] == '1':
-                return '00110000000001000010000', 1
-            return '00000000000000000000000', 0
-
-        pbn_claudine = file_to_PBN(filename = filename,
-                                   zeroes = zeroes, ones = ones, sync = True)
-        pbn_claudine.stationary_law2(approach_attrs = approach_attrs,
-                                attr_colors = [(0,255,0), (255,0,0), (0,0,255)],
-                                attr_names = ['Th0', 'Th1', 'Th2'],
-                                T = 20, R = 1000)
-
-
-##
+########### PARTIE 3/3 - GÉNÉRATEURS ##########
 
 def generateBN(n, k, sync, v = False, f = False, p = 0):
     """Construit un BN dont chacun des n nœuds est régulé par k voisins ou moins.
@@ -1489,92 +1434,12 @@ def generate_Random_PBN(m, n, k, indep, sync = True, p = 0, q = .1):
                regulation = (neighs,))
 
 
-def test_syntheticBN(n, k):
-
-    gs = [generateBN(n, k, sync = True, v = False, f = False, p = 0),
-          generateBN(n, k, sync = True, v = False, f = True, p = 0)]
-
-    for g in gs:
-        print(g)
-        g.regulation_graph()
-        gasync = g.copy_PBN(sync = False)
-        if n <= 6: g.STG()
-        g.stationary_law(show_all = False)
-        if n <= 6: gasync.STG(layout = nx.spring_layout)
-        gasync.stationary_law(T = 200, N = 500, R = 500, show_all = False)
 
 
-def test_syntheticPBN(m, n, k, indep):
-    gs = [generate_Random_PBN([m,1,m,1], n, k, indep = True, sync = True,
-                                                             p = 0, q = .1),
-          generate_Random_PBN(m, n, k, indep = indep, sync = True,
-                                                      p = 0, q = .1)]
-
-    for g in gs:
-        print(g)
-        g.STG_PBN()
-        g.copy_PBN(sync = False).STG_PBN()
-        # g.simulation(50, verb = True)
-
-
-def test_filesPBN():
-
-    model = file_to_PBN('output\Table1A_fAll_d1_p08_newsyntax.pbn')
-    print(model)
-
-    gs = [generateBN(5, 3, sync = True, v = False, f = False, p = 0), # reg
-          generateBN(8, 4, sync = True, v = False, f = True, p = 0), # reg signé
-          generate_Random_PBN([2,3,2,1,1], 5, 3, indep = True), # PBN indep
-          generate_Random_PBN(2, 5, 3, indep = False)] # PBN non-indep
-    for g in gs:
-        print(g)
-        g.regulation_graph()
-        g.PBN_to_file()
-        g2 = file_to_PBN(filename = 'output\\' + g.title + '.pbn')
-        print(g2)
-        g.regulation_graph()
-
-
-
-
-##
-
-def tests():
-
-    # Modèle simple à 4 noeuds : STG synchrone, STG asynchrone, loi synchrone
-    ex_toymodel()
-
-    # PBN à tirages indépendants : STG synchrone, loi synchrone
-    ex_shmulevich2001()
-
-    # Modèle biologique à 10 noeuds : loi synchrone,
-                            # loi asynchrone avec affichage des attrs synchrones
-    ex_mammaliancellcycle()
-
-    # 6 simulations en synchrone et asynchrone)
-                        # des fonctions voisines dans le diagramme de Hasse
-    # test_claudine()
-
-    # BN synthétique à n noeuds et k voisins : STG, loi
-    test_syntheticBN(4,2)
-
-    # PBN synthétique à n noeuds et m contextes : STG
-    test_syntheticPBN(2, 4, 1, indep = False)
-
-    # Divers exemples de conversion entre objets PBN et fichiers .pbn
-    test_filesPBN()
-
-
-tests()
-
-
-
-#TODO : interaction console
 #TODO : sauvegarder un PBN et des prints console dans un fichier texte
 
 #TODO : functionhood.getFormulaChildren/Parents, dans GeneratePBN avec Py4J
 #TODO : autre version du code avec appels Py4J sur le getAttractors de BioLQM ?
-
 
 #TODO : rédiger la démo sur |BOA| merde
 #TODO : en non-déterministe (async et PBN), le seuil T pour assez d'attracteurs ?

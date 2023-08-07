@@ -62,6 +62,46 @@ def prod(L: list) -> int:
     return L[0] * prod(L[1:])
 
 
+def fct_to_clauseDNF(fct: int, neigh_states_i: list, neighs_i: list) -> str:
+
+    clauses = []
+    for antec in neigh_states_i:
+        if fct(antec):
+            litts = []
+            for ind in neighs_i:
+                if antec[ind]:
+                    litts.append(f'x{ind}')
+                if not antec[ind]:
+                    litts.append(f'!x{ind}')
+            clauses.append('(' + ' & '.join(litts) + ')')
+    return ' | '.join(clauses)
+
+
+def clause_to_fct(factors: str, targets: dict) -> str:
+    targs = list(targets.keys())
+    for y in sorted(targs, key = len, reverse = True):
+        factors = factors.replace(str(y), 'x[%s]' %targets[y])
+
+    # Remplacement des '!(...)' par des '(not ...)'
+    while '!' in factors:
+        fac0, fac1 = factors.split('!', 1)
+        if fac1[0] != '(':
+            fac11, fac12 = fac1.split(']', 1)
+            factors = fac0 + '(not ' + fac11 + '])' + fac12
+
+        else:
+            cpt_par = 1
+            i = -1
+            while cpt_par:
+                i += 1
+                if fac1[i] == '(':
+                    cpt_par+=1
+                elif fac1[i] == ')':
+                    cpt_par-=1
+            factors = fac0 + '(not ' + fac1[:i] + '])' + fac2[i:]
+
+    return factors
+
 
 ########### PARTIE 2/3 - CLASSE 'PBN' ##########
 
@@ -160,9 +200,10 @@ class PBN:
         self.title = title
         if sync: s_sync = 'sync'
         else: s_sync = 'async'
+        s_indep = 'indep' * indep
 
         # son titre pour les figures
-        self.longtitle = f'{title} {s_sync}'
+        self.longtitle = f'{title} {s_sync} {s_indep}'
 
         # # Nombre de gènes
         self.n = n
@@ -501,7 +542,7 @@ str(self.c), str(self.x), s_ctxt, s_ctxtbl)
 
         # En asynchrone, on affiche dans une autre couleur les attracteurs
         # présents en simulation synchrone afin d'évaluer leur prévalence.
-        if self.sync == False:
+        if (not self.sync) and (not self.pbn) :
             df['ranking'] = df['Fréquence'].rank(method = 'min',
                                                  ascending = False)
             sim_s = self.copy_PBN(sync = True) \
@@ -544,35 +585,36 @@ str(self.c), str(self.x), s_ctxt, s_ctxtbl)
         plt.gca().set(title = f'{self.longtitle} - '
                               f'Distribution empirique pour {R} simulations')
 
-        if self.sync == False:
-            if prio_attrs:
-                plt.legend(handles = [plot_blue, plot_red,
-                                      plot_green, plot_pink])
+        if not self.pbn:
+            if self.sync == False:
+                if prio_attrs:
+                    plt.legend(handles = [plot_blue, plot_red,
+                                        plot_green, plot_pink])
+                else:
+                    plt.legend(handles = [plot_blue, plot_red])
             else:
-                plt.legend(handles = [plot_blue, plot_red])
-        else:
-            plt.legend(handles = [plot_blue])
-            # En synchrone, on partitionne les traits de hauteur similaire
-            # Ils peuvent correspondre aux bassins d'attraction
-            classes = []
-            for i in range(len(df)):
-                if df['Fréquence'][i] > 0:
-                    flag = False
-                    for c in classes:
-                        m = np.mean(df['Fréquence'][c])
-                        if 0.98 * m <= df['Fréquence'][i] <= 1.02 * m:
-                            c.append(df.index[i])
-                            flag = True
-                            break
-                    if not flag:
-                        classes.append([df.index[i]])
-            print('\nLes %i classes supposées sont : ' %len(classes))
-            for c in classes:
-                size = round(sum(df['Fréquence'][c]) * 2**(self.n))
-                #TODO : marge d'erreur à 95%
-                freq100 = 100 * sum(df['Fréquence'][c])
-                print('%s : bassin de taille %i (%.1f %%)' \
-                       %(str(c), size, freq100))
+                plt.legend(handles = [plot_blue])
+                # En synchrone, on partitionne les traits de hauteur similaire
+                # Ils peuvent correspondre aux bassins d'attraction
+                classes = []
+                for i in range(len(df)):
+                    if df['Fréquence'][i] > 0:
+                        flag = False
+                        for c in classes:
+                            m = np.mean(df['Fréquence'][c])
+                            if 0.98 * m <= df['Fréquence'][i] <= 1.02 * m:
+                                c.append(df.index[i])
+                                flag = True
+                                break
+                        if not flag:
+                            classes.append([df.index[i]])
+                print('\nLes %i classes supposées sont : ' %len(classes))
+                for c in classes:
+                    size = round(sum(df['Fréquence'][c]) * 2**(self.n))
+                    #TODO : marge d'erreur à 95%
+                    freq100 = 100 * sum(df['Fréquence'][c])
+                    print('%s : bassin de taille %i (%.1f %%)' \
+                        %(str(c), size, freq100))
 
         plt.subplots_adjust(bottom = 0.03 + 0.02 * self.n)
         plt.show()
@@ -856,7 +898,7 @@ str(self.c), str(self.x), s_ctxt, s_ctxtbl)
 
 
     def regulation_graph(self, layout = nx.spring_layout):
-        """Affichage du graphe de régulation."""
+        """Affiche le graphe de régulation."""
 
         if len(self.regulation) == 0:
             print("Le réseau n'est pas régulé.")
@@ -897,6 +939,91 @@ str(self.c), str(self.x), s_ctxt, s_ctxtbl)
                         edge_color = color, width = 1.5, arrowstyle = style,
                         arrowsize = size, connectionstyle='arc3, rad=0.1')
         plt.show()
+
+
+    def PBN_to_file(self, filename = None):
+        """ Consigne les paramètres du modèle dans un fichier. """
+
+        if filename == None :
+            filename = self.title
+
+        with open('output\\' + filename + '.pbn', 'w') as f:
+            f.write(f'sync = {int(self.sync)}\n')
+            f.write(f'p = {self.p}\n')
+            f.write(f'q = {self.q}\n')
+            s_card = ''
+            if self.zeroes or self.ones:
+                for i in range(self.n):
+                    if i in self.zeroes : s_card += '0'
+                    elif i in self.ones : s_card += '1'
+                    else : s_card += '*'
+                f.write(f'init = {s_card}\n')
+            else:
+                s_card = '*' * self.n
+                f.write(f'init = {s_card}\n')
+            f.write(f'indep = {int(self.indep)}\n\n')
+
+            f.write('targets, factors\n')
+
+            if len(self.regulation)==2 and (not self.pbn):
+                # BN signé : fonction par défaut
+                activators, inhibitors = self.regulation
+                for i in range(self.n):
+                    s_activ = " | ".join(['x'+str(j) for j in activators[i]])
+                    s_inhib = " | ".join(['x'+str(j) for j in inhibitors[i]])
+
+                    if not activators[i]:
+                        f.write(f'x{i}, ! ({s_inhib})\n')
+                    elif not inhibitors[i]:
+                        f.write(f'x{i}, {s_activ}\n')
+                    else:
+                        f.write(f'x{i}, ({s_activ}) & ! ({s_inhib})\n')
+
+            else:
+                if len(self.regulation)==0:
+                    # on ne connaît pas la régulation...
+                    neighs = [[i for i in range(self.n)] for _ in range(self.n)]
+
+                if len(self.regulation)==2:
+                    # PBN à régulation signée
+                    activators, inhibitors = self.regulation
+                    neighs = [sorted(activators[i] + inhibitors[i])
+                              for i in range(self.n)]
+                else:
+                    # BN ou PBN à régulation non-signée
+                    neighs = self.regulation[0]
+
+                neigh_states = []
+                for i in range(self.n):
+                    k = len(neighs[i])
+                    L = list(map(list, itertools.product([0, 1], repeat = k)))
+                    vois_i = []
+                    for inds in L:
+                        y = [0] * self.n
+                        for j in range(k):
+                            if inds[j]:
+                                y[neighs[i][j]] = 1
+                        vois_i.append(y)
+                    neigh_states.append(vois_i)
+
+                if self.indep:
+                    for i in range(self.n):
+                        for (fct, w) in zip(self.fcts[i], self.c[i]):
+                            f.write(f'x{i}, ')
+                            s = fct_to_clauseDNF(fct, neigh_states[i], neighs[i])
+                            f.write(s)
+                            f.write(f', {w}\n')
+                        f.write('\n')
+
+                else:
+                    for j in range(self.m):
+                        f.write(f'w = {self.c[j]}\n')
+                        for i in range(self.n):
+                            f.write(f'x{i}, ')
+                            s = fct_to_clauseDNF(self.fcts[j][i], neigh_states[i], neighs[i])
+                            f.write(f'{s}\n')
+                        f.write('\n')
+            f.close()
 
 
 
@@ -997,9 +1124,23 @@ def ex_mammaliancellcycle():
 
 ##
 
-def file_to_PBN(filename, title=None, sync = True, p = 0, q = 1,
+def file_to_PBN(filename, title=None, sync = True, indep = True, p = 0, q = 1,
                 zeroes = [], ones = []):
-    """Crée un PBN à partir d'une description dans un fichier.
+    """Crée un PBN à partir d'une description dans un fichier de forme :
+    sync = (0 ou 1)
+    p = (float entre 0 et 1)
+    q = (float entre 0 et 1)
+    init = (un élt de {0,1}^n avec possibilité de wildcards)
+    indep = 0 ou 1
+
+    targets, factors
+    (si indep, for j<m[i] for i<n: )
+        xi, fij, cij
+
+    (si !indep, for j<m: )
+        w = (float entre 0 et 1)
+        (for i<n: )
+        xi, fji
 
     Parameters
     ----------
@@ -1035,59 +1176,70 @@ def file_to_PBN(filename, title=None, sync = True, p = 0, q = 1,
         q = float(lines_param[start].split('= ')[1])
         start += 1
     if lines_param[start][:4] == 'init':
+        zeroes, ones = [], []
         card = lines_param[start].split('= ')[1]
         for i in range(len(card)):
             if card[i]=='0': zeroes.append(i)
             if card[i]=='1': ones.append(i)
-        print(zeroes, ones)
+        start += 1
+    if lines_param[start][:5] == 'indep':
+        indep = bool(int(lines_param[start].split('= ')[1]))
+        start += 1
 
     lines = text.split('\n')
-    targets = dict() # associe les noms de variables à des indices
-    # Remplissage du dictionnaire targets
+    targets = dict()
+    # Remplissage du dictionnaire targets indiçant les variables
     index = 0
     for line in lines:
         if line  != '' and line[0] !='\n':
-            target = line.split(', ')[0]
-            if target not in targets.keys():
-                targets[target] = index
-                index += 1
-
+            splits = line.split(', ')
+            if len(splits) > 1:
+                target = splits[0]
+                if target not in targets.keys():
+                    targets[target] = index
+                    index += 1
 
     # Parsing des fonctions et de leurs probabilités
-    functs = [[] for _ in range(len(targets))]
-    cs = [[] for _ in range(len(targets))]
-    for line in lines:
-        if line != '' and line[0] !='\n':
-            target, factors, c = line.split(', ')
-            x = targets[target]
-            targs = list(targets.keys())
-            for y in sorted(targs, key = len, reverse = True):
-                factors = factors.replace(str(y), 'x[%s]' %targets[y])
+    if indep:
+        functs = [[] for _ in range(len(targets))]
+        cs = [[] for _ in range(len(targets))]
+        for line in lines:
+            if line != '' and line[0] !='\n':
+                # Lecture de la ligne décrivant la fonction
+                target, factors, c = line.split(', ')
+                factors = clause_to_fct(factors, targets)
 
-            # Remplacement des '!(...)' par des '(not ...)'
-            while '!' in factors:
-                fac0, fac1 = factors.split('!', 1)
-                if fac1[0] != '(':
-                    fac11, fac12 = fac1.split(']', 1)
-                    factors = fac0 + '(not ' + fac11 + '])' + fac12
+                # Conversion de la clause en fonction booléenne
+                x = targets[target]
+                functs[x].append(eval('lambda x: ' + factors))
+                cs[x].append(float(c))
 
+    else:
+        functs, cs = [], []
+        start_flag = True
+        context = [0 for _ in range(len(targets))]
+        for line in lines:
+            if line != '' and line[0] !='\n':
+                if line[:4] == 'w = ':
+                    cs.append(float(line[4:]))
+                    if not start_flag:
+                        functs.append(context)
+                    context = [0 for _ in range(len(targets))]
                 else:
-                    cpt_par = 1
-                    i = -1
-                    while cpt_par:
-                        i += 1
-                        if fac1[i] == '(':
-                            cpt_par+=1
-                        elif fac1[i] == ')':
-                            cpt_par-=1
-                    factors = fac0 + '(not ' + fac1[:i] + '])' + fac2[i:]
-            # Conversion des str en fonctions booléennes
-            functs[x].append(eval('lambda x: ' + factors))
-            cs[x].append(float(c))
+                    start_flag = False
+                    target, factors = line.split(', ')
+                    factors = clause_to_fct(factors, targets)
+
+                    x = targets[target]
+                    context[x] = eval('lambda x: ' + factors)
+
+        functs.append(context)
+        if cs == []:
+            cs = [1]
 
     return PBN(title = title,
                n = len(targets),
-               indep = True,
+               indep = indep,
                f = functs,
                c = cs,
                sync = sync,
@@ -1177,9 +1329,9 @@ def generateBN(n, k, sync, v = False, f = False, p = 0):
         G.add_edges_from(edges)
         flag = not nx.is_connected(G)
 
-    for i in nodes:
-        print('%s -> %i' %(neighs[i], i))
-    print()
+    # for i in nodes:
+    #     print('%s -> %i' %(neighs[i], i))
+    # print()
 
     # Pour chaque gène i de voisins i_1 ... i_ki,
     if f:
@@ -1196,14 +1348,17 @@ def generateBN(n, k, sync, v = False, f = False, p = 0):
 
         # Calcul déterministe de la fonction par défaut
         functs = []
+        fun_I = lambda i: lambda x: not(any([x[k] for k in inhibitors[i]]))
+        fun_A = lambda i: lambda x: any([x[k] for k in activators[i]])
+        fun_IA = lambda i: lambda x: any([x[k] for k in activators[i]]) \
+                                and not(any([x[k] for k in inhibitors[i]]))
         for i in range(n):
             if not activators[i]:
-                functs.append(lambda x: not(any([x[k] for k in inhibitors[i]])))
+                functs.append(fun_I(i))
             elif not inhibitors[i]:
-                functs.append(lambda x: any([x[k] for k in activators[i]]))
+                functs.append(fun_A(i))
             else:
-                functs.append(lambda x: any([x[k] for k in activators[i]])
-                                and not(any([x[k] for k in inhibitors[i]])))
+                functs.append(fun_IA(i))
         regulation = (activators, inhibitors)
         functs = [functs]
 
@@ -1234,7 +1389,7 @@ def generatePBN(BN, i_modifs, p_ref, dist, q=1):
     Parameters
     ----------
     BN : PBN
-        Un réseau booléen n'ayant qu'un seul contexte.
+        Un réseau booléen, n'ayant donc qu'un seul contexte.
     i_modifs : list
         Liste des indices des bits dont on veut étendre la fonction.
     p_ref : int
@@ -1289,8 +1444,8 @@ def generate_Random_PBN(m, n, k, indep, sync = True, p = 0, q = .1):
     nodes = [i for i in range(n)]
     # Sélection de k voisins pour chaque gène
     neighs = [sorted(random.sample(nodes, k)) for _ in range(n)]
-    for i in nodes:
-        print('%s -> %i' %(neighs[i], i))
+    # for i in nodes:
+    #     print('%s -> %i' %(neighs[i], i))
 
     if indep:
         # Génération d'un F = F1 x ... x Fn,
@@ -1331,7 +1486,7 @@ def generate_Random_PBN(m, n, k, indep, sync = True, p = 0, q = .1):
                sync = sync,
                p = p,
                q = q,
-               regulation = neighs)
+               regulation = (neighs,))
 
 
 def test_syntheticBN(n, k):
@@ -1362,6 +1517,26 @@ def test_syntheticPBN(m, n, k, indep):
         # g.simulation(50, verb = True)
 
 
+def test_filesPBN():
+
+    model = file_to_PBN('output\Table1A_fAll_d1_p08_newsyntax.pbn')
+    print(model)
+
+    gs = [generateBN(5, 3, sync = True, v = False, f = False, p = 0), # reg
+          generateBN(8, 4, sync = True, v = False, f = True, p = 0), # reg signé
+          generate_Random_PBN([2,3,2,1,1], 5, 3, indep = True), # PBN indep
+          generate_Random_PBN(2, 5, 3, indep = False)] # PBN non-indep
+    for g in gs:
+        print(g)
+        g.regulation_graph()
+        g.PBN_to_file()
+        g2 = file_to_PBN(filename = 'output\\' + g.title + '.pbn')
+        print(g2)
+        g.regulation_graph()
+
+
+
+
 ##
 
 def tests():
@@ -1378,7 +1553,7 @@ def tests():
 
     # 6 simulations en synchrone et asynchrone)
                         # des fonctions voisines dans le diagramme de Hasse
-    test_claudine()
+    # test_claudine()
 
     # BN synthétique à n noeuds et k voisins : STG, loi
     test_syntheticBN(4,2)
@@ -1386,16 +1561,16 @@ def tests():
     # PBN synthétique à n noeuds et m contextes : STG
     test_syntheticPBN(2, 4, 1, indep = False)
 
-    model = file_to_PBN('Experiments_Th_model\Table1A_fAll_d1_p08_newsyntax.bnet')
-    print(model)
+    # Divers exemples de conversion entre objets PBN et fichiers .pbn
+    test_filesPBN()
+
 
 tests()
 
 
 
-#TODO : prendre une fiche d'instructions
 #TODO : interaction console
-#TODO : sauvegarder un PBN dans un fichier texte
+#TODO : sauvegarder un PBN et des prints console dans un fichier texte
 
 #TODO : functionhood.getFormulaChildren/Parents, dans GeneratePBN avec Py4J
 #TODO : autre version du code avec appels Py4J sur le getAttractors de BioLQM ?

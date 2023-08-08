@@ -49,8 +49,8 @@ Un fichier script importe la classe et ses fonctions annexes :
 from PBN_simulation import *
 ```
 
-### Créer d'un réseau booléen probabiliste
-Un objet PBN peut être créé en parcourant un fichier décrivant ses attributs et ses contextes (`file_to_PBN()`), ou en génération aléatoire (`generateBN()`, `generate_Random_PBN()`).
+### Construire un réseau booléen probabiliste
+Un objet PBN peut être créé en parcourant un fichier décrivant ses attributs et ses contextes (`file_to_PBN()`), ou en génération aléatoire (`generateBN()`, `generate_Random_PBN()` pouvant fixer leurs attributs).
 
 ### Analyser
 *(cf. Méthodes)*

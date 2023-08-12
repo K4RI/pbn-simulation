@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <!-- Project Description -->
+  <groupId>org.colomoto.function</groupId>
+  <artifactId>FunctionHood</artifactId>
+  <name>FunctionHood</name>
+  <version>0.1</version>
+	<description>Java library to compute the neighbourhood of a given Boolean function</description>
+  <inceptionYear>2016</inceptionYear>
+  <packaging>jar</packaging>
+  <url>http://github.com/ptgm/functionhood/</url>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+  </properties>
+
+  <repositories>
+    <!-- GINsim repository provides ready-to-use jars for MDDlib, JSBML -->
+		<repository>
+			<id>ginsim_snapshot</id>
+			<snapshots><enabled>true</enabled></snapshots>
+			<releases><enabled>false</enabled></releases>
+			<name>GINsim snapshot repository</name>
+			<url>http://ginsim.org/maven/snapshot</url>
+		</repository>
+		<repository>
+			<id>ginsim_stable</id>
+			<snapshots><enabled>false</enabled></snapshots>
+			<releases><enabled>true</enabled></releases>
+			<name>GINsim deps</name>
+			<url>http://ginsim.org/maven/stable</url>
+		</repository>
+
+  </repositories>
+
+
+	<dependencies>
+
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.10</version>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.antlr</groupId>
+			<artifactId>antlr-runtime</artifactId>
+			<version>3.1.3</version>
+			<scope>compile</scope>
+		</dependency>
+
+
+		<dependency>
+			<groupId>com.martiansoftware</groupId>
+			<artifactId>jsap</artifactId>
+			<version>2.1</version>
+		</dependency>
+
+  </dependencies>
+
+
+	<build>
+			<plugins>
+
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-compiler-plugin</artifactId>
+					<version>3.1</version>
+					<configuration>
+						<source>1.6</source>
+						<target>1.6</target>
+					</configuration>
+				</plugin>
+
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-jar-plugin</artifactId>
+					<version>2.4</version>
+					<configuration>
+						<archive>
+							<manifest>
+								<addClasspath>true</addClasspath>
+								<classpathPrefix>lib/</classpathPrefix>
+								<useUniqueVersions>false</useUniqueVersions>
+								<mainClass>org.colomoto.function.GetFunctionNeighbours</mainClass>
+							</manifest>
+						</archive>
+					</configuration>
+				</plugin>
+
+			</plugins>
+	</build>
+
+</project>

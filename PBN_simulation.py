@@ -3,6 +3,7 @@
 # @author: K4RI
 
 from collections import Counter
+from sympy import *
 import itertools
 from matplotlib import cm
 from matplotlib.legend_handler import HandlerTuple
@@ -11,46 +12,21 @@ import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
 import pandas as pd
+from py4j.java_gateway import JavaGateway
 import random
-from typing import Any, Callable
 
 
 
-########### PARTIE 1 / 3 - FONCTIONS ANNEXES ##########
+########### PARTIE 1 / 3 - UTILITY FUNCTIONS ##########
 
-def truth_table1(F: list, n: int) -> str :
-    """Affiche la table de vérité pour des fonctions booléennes.
+def init_vars(n: int):
+    """Initialise les variables x0, ..., x_{n-1}."""
 
-    Parameters
-    ----------
-    F : list
-        Liste de fonctions booléennes.
-    n : int
-        Arité des fonctions booléennes de F.
-
-    Returns
-    -------
-    str
-        La chaîne de caractères représentant la table de vérité.
-    """
-
-    L = list(map(list, itertools.product([0, 1], repeat = n)))
-    s = ''
-    for x in L :
-        s += '%s || %s \n' %(''.join([str(u) for u in x]),
-                             ' '.join([str(int(f(x))) for f in F]))
-    return s
-
-
-def truth_table2(F: list, n: int) -> str:
-    """Identique à la précédente, mais F est séparée en sous-listes."""
-    L = list(map(list, itertools.product([0, 1], repeat = n)))
-    s = ''
-    for x in L :
-        s += '%s || %s \n' %(''.join([str(u) for u in x]),
-                             ' - '.join([' '.join([str(int(f(x)))
-                                         for f in ff]) for ff in F]))
-    return s
+    varnames = []
+    for i in range(n):
+        globals().__setitem__(f'x{i}', Symbol(f'x{i}'))
+        varnames.append(Symbol(f'x{i}'))
+    return varnames
 
 
 def Hamming(x: list, y: list) -> int:
@@ -64,84 +40,18 @@ def prod(L: list) -> int:
     return L[0] * prod(L[1:])
 
 
-def fct_to_clauseDNF(fct: Callable[[list], int], neigh_states_i: list,
-                     neighs_i: list, varnames: list) -> str:
-    """Transforme une fonction booléenne en son DNF.
+def bit_list(n: int) -> list:
+    """Renvoie la liste des listes binaires de taille n."""
 
-    Parameters
-    ----------
-    fct : function
-        Fonction booléenne.
-    neigh_states_i: list
-        Combinaisons possibles des voisins du gène.
-    neighs_i : list
-        Nombre de voisins du gène.
-    varnames: list
-        Noms des gènes.
-
-    Returns
-    -------
-    str
-        La DNF de la fonction booléenne.
-    """
-
-    clauses = []
-    for antec in neigh_states_i:
-        if fct(antec):
-            litts = []
-            for ind in neighs_i:
-                if antec[ind]:
-                    litts.append(f'{varnames[ind]}')
-                if not antec[ind]:
-                    litts.append(f'!{varnames[ind]}')
-            clauses.append('(' + ' & '.join(litts) + ')')
-    return ' | '.join(clauses)
+    return list(map(list, itertools.product([0, 1], repeat = n)))
 
 
-def clause_to_fct(factors: str, targets: dict) -> str:
-    """Transforme l'expression d'une fonction booléenne en une chaîne de
-        caractères correspondante évaluable par Python.
+def bit_list_str(n: int) -> list:
+    """Renvoie la liste des mots binaires de taille n."""
 
-    Parameters
-    ----------
-    factors : str
-        Fonction booléenne.
-    targets : dict
-        Dictionnaire associant chaque nom de gène à son indice.
+    return list(map(lambda t : ''.join(map(str, t)),
+                            itertools.product([0, 1],repeat=n)))
 
-    Returns
-    -------
-    str
-        La chaîne de caractères.
-    """
-
-    targs = list(targets.keys())
-    vois = []
-    for y in sorted(targs, key = len, reverse = True):
-        factors_1 = factors.replace(str(y), 'x[%s]' %targets[y])
-        if factors_1 != factors:
-            vois.append(targets[y])
-        factors = factors_1
-
-    # Remplacement des '!(...)' par des '(not ...)'
-    while '!' in factors:
-        fac0, fac1 = factors.split('!', 1)
-        if fac1[0] != '(':
-            fac11, fac12 = fac1.split(']', 1)
-            factors = fac0 + '(not ' + fac11 + '])' + fac12
-
-        else:
-            cpt_par = 1
-            i = -1
-            while cpt_par:
-                i += 1
-                if fac1[i] == '(':
-                    cpt_par+=1
-                elif fac1[i] == ')':
-                    cpt_par-=1
-            factors = fac0 + '(not ' + fac1[:i] + '])' + fac2[i:]
-
-    return factors, vois
 
 
 ########### PARTIE 2/3 - CLASSE 'PBN' ##########
@@ -171,6 +81,9 @@ class PBN:
     currentfct_vector : list
         Liste actuelle des fonctions de transition sélectionnées, aussi
         appelée "contexte".
+    indep : bool
+        Indépendance entre les choix de fonctions de transition
+        pour différents bits.
     fcts : list
         Fonctions booléennes décrivant la dynamique du réseau.
         Une fonction associée au i-ème bit prend en argument l'état du PBN, et
@@ -185,9 +98,6 @@ class PBN:
         Indice(s) des fonctions du contexte currentfct_vector dans fcts.
     sync : bool
         Mode de mise à jour du PBN, True si synchrone et False si asynchrone.
-    indep : bool
-        Indépendance entre les choix de fonctions de transition
-        pour différents bits.
     regulation : int
         Dans le cas où le modèle est un BN,
                                   ou un PBN ayant un contexte de référence.
@@ -203,8 +113,7 @@ class PBN:
     q : float
         Probabilité de changer de fonction.
     varnames : list
-        Liste des noms de variables
-
+        Liste des variables.
 
     Methods
     -------
@@ -232,7 +141,6 @@ class PBN:
             Liste des indices des bits à initialiser à 0.
         ones : list
             Liste des indices des bits à initialiser à 1.
-
 
         Raises
         -------
@@ -343,7 +251,8 @@ class PBN:
             s_sync = 'asynchrone'
 
         if self.varnames:
-            s_varnames = '\n' + ' - '.join(self.varnames)
+            var_str = list(map(str, self.varnames))
+            s_varnames = '\n' + ' - '.join(var_str)
         else:
             s_varnames = '\n'
 
@@ -371,9 +280,9 @@ class PBN:
         s_ctxtbls = ' \n'
         s_ctxtbl = ' \n'
         if self.n <= 5:
-            s_ctxtbls = truth_table2(self.fcts, self.n)
+            s_ctxtbls = self.truth_table2(self.fcts)
             if self.pbn:
-                s_ctxtbl = truth_table1(self.currentfct_vector, self.n)
+                s_ctxtbl = self.truth_table1(self.currentfct_vector)
 
         return '''======================================
 '%s'
@@ -394,8 +303,42 @@ Contexte actuel : %s
 s_fcts, s_ctxtbls, str(self.c), str(self.x), s_ctxt, s_ctxtbl)
 
 
+    def truth_table1(self, F: list) -> str :
+        """Affiche la table de vérité pour des fonctions booléennes.
+
+        Parameters
+        ----------
+        F : list
+            Liste de fonctions booléennes.
+        Returns
+        -------
+        str
+            La chaîne de caractères représentant la table de vérité.
+        """
+
+        L = bit_list(self.n)
+        s = ''
+        for x in L :
+            s += '%s || %s \n' %(''.join([str(u) for u in x]),
+                                ' '.join([str(self.evalf(x,f)) for f in F]))
+        return s
+
+
+    def truth_table2(self, F: list) -> str:
+        """Identique à la précédente, mais F est séparée en sous-listes."""
+
+        L = bit_list(self.n)
+        s = ''
+        for x in L :
+            s += '%s || %s \n' %(''.join([str(u) for u in x]),
+                                ' - '.join([' '.join([str(self.evalf(x,f))
+                                            for f in ff]) for ff in F]))
+        return s
+
+
     def copy_PBN(self, title = None, n = None, indep = None, fcts = None,
-                 c = None, sync = None, p = None, q = None):
+                 c = None, sync = None, p = None, q = None, varnames = None,
+                 regulation = None):
         """Copie un PBN.
 
         Parameters
@@ -418,6 +361,8 @@ s_fcts, s_ctxtbls, str(self.c), str(self.x), s_ctxt, s_ctxtbl)
         if sync == None: sync = self.sync
         if p == None: p = self.p
         if q == None: q = self.q
+        if varnames == None: varnames = self.varnames
+        if regulation == None: regulation = self.regulation
 
         return PBN(title = title,
                    n = n,
@@ -426,7 +371,9 @@ s_fcts, s_ctxtbls, str(self.c), str(self.x), s_ctxt, s_ctxtbl)
                    c = c,
                    sync = sync,
                    p = p,
-                   q = q)
+                   q = q,
+                   varnames = varnames,
+                   regulation = regulation)
 
 
     def init_state(self):
@@ -495,17 +442,24 @@ s_fcts, s_ctxtbls, str(self.c), str(self.x), s_ctxt, s_ctxtbl)
                 print('Changement de contexte : ', 'f_' + str(self.currentfct))
 
 
+    def evalf(self, x, f):
+        """Évalue la fonction f au vecteur x."""
+
+        return int(f.subs({self.varnames[i]:x[i] for i in range(self.n)}) == True)
+
+
     def succ(self, x, f):
         """Renvoie la liste des successeurs d'un x par un contexte f."""
 
+        xs = [[self.evalf(x, f[i]) for i in range(self.n)]]
+
         # Cas synchrone : tous les bits sont mis à jour
         if self.sync:
-            return [[int((f[i])(x)) for i in range(self.n)]]
+            return xs
 
         # Cas asynchrone : toutes les possibilités de mise à jour de chaque bit
         else:
-            xs = [int((f[i])(x)) for i in range(self.n)]
-            i_modifs = [i for i in range(self.n) if x[i] != xs[i]]
+            i_modifs = [i for i in range(self.n) if x[i] != xs[0][i]]
             if i_modifs == []: # si état stable
                 return [x]
             succs = []
@@ -588,8 +542,7 @@ s_fcts, s_ctxtbls, str(self.c), str(self.x), s_ctxt, s_ctxtbl)
         df = pd.DataFrame.from_dict(count, orient = 'index',
                                     columns = ['Fréquence'])
         if show_all:
-            bins = list(map(lambda t : ''.join(map(str, t)),
-                            itertools.product([0, 1],repeat=self.n) ))
+            bins = bit_list_str(self.n)
             df = df.reindex(bins, fill_value = 0)
         df = df.sort_index()
         color = len(df) * ['blue']
@@ -815,10 +768,9 @@ s_fcts, s_ctxtbls, str(self.c), str(self.x), s_ctxt, s_ctxtbl)
             f = self.currentfct_vector
 
         G = nx.DiGraph()
-        nodes_str = list(map(lambda t : ''.join(map(str, t)),
-                             itertools.product([0, 1], repeat = self.n)))
+        nodes_str = bit_list_str(self.n)
         G.add_nodes_from(nodes_str)
-        nodes = list(map(list, itertools.product([0, 1], repeat = self.n)))
+        nodes = bit_list(self.n)
 
         # On construit la liste d'adjacence
         for x in nodes:
@@ -1023,73 +975,23 @@ s_fcts, s_ctxtbls, str(self.c), str(self.x), s_ctxt, s_ctxtbl)
             if self.varnames:
                 varnames = self.varnames
             else:
-                varnames = [f'x{i}' for i in range(self.n)]
+                varnames = init_vars(self.n)
 
-            if len(self.regulation)==2 and (not self.pbn):
-                # BN signé : fonction par défaut, on connaît les formules
-                activators, inhibitors = self.regulation
+            if self.indep: # indépendant : gène par gène
                 for i in range(self.n):
-                    s_activ = " | ".join(['x'+str(j) for j in activators[i]])
-                    s_inhib = " | ".join(['x'+str(j) for j in inhibitors[i]])
+                    for (ff, w) in zip(self.fcts[i], self.c[i]):
+                        ff = str(ff).replace('~', '!')
+                        f.write(f'{varnames[i]}, {ff}, {w}\n')
+                    f.write('\n')
 
-                    if not activators[i]:
-                        f.write(f'{varnames[i]}, ! ({s_inhib})\n')
-                    elif not inhibitors[i]:
-                        f.write(f'{varnames[i]}, {s_activ}\n')
-                    else:
-                        f.write(f'{varnames[i]}, ({s_activ}) & ! ({s_inhib})\n')
-
-            else:
-                # sinon, on simule toutes les combinaisons de voisins.
-
-                if len(self.regulation)==0:
-                    # on ne connaît pas la régulation...
-                    neighs = [[i for i in range(self.n)] for _ in range(self.n)]
-
-                if len(self.regulation)==2:
-                    # PBN à régulation signée
-                    activators, inhibitors = self.regulation
-                    neighs = [sorted(activators[i] + inhibitors[i])
-                              for i in range(self.n)]
-                else:
-                    # BN ou PBN à régulation non-signée
-                    neighs = self.regulation[0]
-
-                # Liste des états à simuler
-                neigh_states = []
-                for i in range(self.n):
-                    # Pour i : les combinaisons d'activation de ses voisins
-                    k = len(neighs[i])
-                    L = list(map(list, itertools.product([0, 1], repeat = k)))
-                    vois_i = []
-                    for inds in L:
-                        y = [0] * self.n
-                        for j in range(k):
-                            if inds[j]:
-                                y[neighs[i][j]] = 1
-                        vois_i.append(y)
-                    neigh_states.append(vois_i)
-
-                if self.indep: # indépendant : gène par gène
+            else: # non-indépendant : contexte par contexte
+                for j in range(self.m):
+                    if self.m > 1: # si c'est un PBN
+                        f.write(f'w = {self.c[j]}\n')
                     for i in range(self.n):
-                        for (fct, w) in zip(self.fcts[i], self.c[i]):
-                            f.write(f'{varnames[i]}, ')
-                            s = fct_to_clauseDNF(fct, neigh_states[i], neighs[i],
-                                                 varnames)
-                            f.write(s)
-                            f.write(f', {w}\n')
-                        f.write('\n')
-
-                else: # non-indépendant : contexte par contexte
-                    for j in range(self.m):
-                        if self.m > 1:
-                            f.write(f'w = {self.c[j]}\n')
-                        for i in range(self.n):
-                            f.write(f'{varnames[i]}, ')
-                            s = fct_to_clauseDNF(self.fcts[j][i], neigh_states[i],
-                                                 neighs[i], varnames)
-                            f.write(f'{s}\n')
-                        f.write('\n')
+                        ff = str(self.fcts[j][i]).replace('~', '!')
+                        f.write(f'{varnames[i]}, {ff}\n')
+                    f.write('\n')
             f.close()
 
 
@@ -1158,19 +1060,20 @@ def file_to_PBN(filename, title=None, sync = True, indep = True, p = 0, q = 1,
         start += 1
 
     lines = text.split('\n')
-    targets = dict()
-    # Remplissage du dictionnaire targets indiçant les variables
+    varnames = []
+    # Remplissage de la liste indiçant les symboles
     index = 0
     for line in lines:
         if line  != '' and line[0] !='\n':
             splits = line.split(', ')
-            if len(splits) > 1:
+            if len(splits) > 1: # on lit bien une ligne x, f
                 target = splits[0]
-                if target not in targets.keys():
-                    targets[target] = index
-                    index += 1
 
-    n = len(targets)
+                if Symbol(target) not in varnames:
+                    globals().__setitem__(target, Symbol(target))
+                    varnames.append(Symbol(target))
+
+    n = len(varnames)
     neighs = [set() for _ in range(n)]
     # Parsing des fonctions et de leurs probabilités
     if indep:
@@ -1179,14 +1082,15 @@ def file_to_PBN(filename, title=None, sync = True, indep = True, p = 0, q = 1,
         for line in lines:
             if line != '' and line[0] !='\n':
                 # Lecture de la ligne décrivant la fonction
-                target, factors, c = line.split(', ')
-                x = targets[target]
-                factors, vois = clause_to_fct(factors, targets)
-                neighs[x].update(vois)
+                target, functions, c = line.replace('!', '~').split(', ')
+                functions = eval(functions)
+                vois = [varnames.index(j) for j in functions.free_symbols]
+                i = varnames.index(Symbol(target))
+                neighs[i].update(vois)
 
                 # Conversion de la clause en fonction booléenne
-                functs[x].append(eval('lambda x: ' + factors))
-                cs[x].append(float(c))
+                functs[i].append(functions)
+                cs[i].append(float(c))
 
     else:
         functs, cs = [], []
@@ -1201,19 +1105,17 @@ def file_to_PBN(filename, title=None, sync = True, indep = True, p = 0, q = 1,
                     context = [0 for _ in range(n)]
                 else:
                     start_flag = False
-                    target, factors = line.split(', ')
-                    x = targets[target]
-                    factors, vois = clause_to_fct(factors, targets)
-                    neighs[x].update(vois)
-                    context[x] = eval('lambda x: ' + factors)
+                    target, functions = line.replace('!', '~').split(', ')
+                    functions = eval(functions)
+                    vois = [varnames.index(j) for j in functions.free_symbols]
+                    i = varnames.index(Symbol(target))
+                    neighs[i].update(vois)
+                    context[i] = functions
 
         functs.append(context)
         if cs == []:
             cs = [1]
 
-    varnames = [0 for _ in range(n)]
-    for (v, i) in targets.items():
-        varnames[i] = v
     neighs = [sorted(neigh) for neigh in neighs]
 
     return PBN(title = title,
@@ -1257,6 +1159,8 @@ def generateBN(n, k, sync, v = False, f = False, p = 0):
     """
     #TODO : option canalyzing functions (x_i=u => f(x)=y) : f(x) = x_i ^/v h(x) ?
 
+    varnames = init_vars(n)
+
     # Détermination du nombre de voisins de chaque gène
     if v:
         n_vois = [random.randint(0,k) for _ in range(n)]
@@ -1278,6 +1182,7 @@ def generateBN(n, k, sync, v = False, f = False, p = 0):
     #     print('%s -> %i' %(neighs[i], i))
     # print()
 
+    functs = []
     # Pour chaque gène i de voisins i_1 ... i_ki,
     if f:
         # Détermination des régulations négatives et positives
@@ -1292,29 +1197,29 @@ def generateBN(n, k, sync, v = False, f = False, p = 0):
                        for i in range(n)]
 
         # Calcul déterministe de la fonction par défaut
-        functs = []
-        fun_I = lambda i: lambda x: not(any([x[k] for k in inhibitors[i]]))
-        fun_A = lambda i: lambda x: any([x[k] for k in activators[i]])
-        fun_IA = lambda i: lambda x: any([x[k] for k in activators[i]]) \
-                                and not(any([x[k] for k in inhibitors[i]]))
         for i in range(n):
+            s_inhib = '~(' + ' | '.join([f'x{j}' for j in inhibitors[i]]) + ')'
+            s_activ = '(' + ' | '.join([f'x{j}' for j in activators[i]]) + ')'
             if not activators[i]:
-                functs.append(fun_I(i))
+                functs.append(eval(s_inhib))
             elif not inhibitors[i]:
-                functs.append(fun_A(i))
+                functs.append(eval(s_activ))
             else:
-                functs.append(fun_IA(i))
+                functs.append(eval(s_activ + ' & ' + s_inhib))
         regulation = (activators, inhibitors)
-        functs = [functs]
 
     else:
         # Une table de vérité aléatoire pour la fonction x_i1 ... x_ik -> x_i
-        T = [np.random.choice([0, 1], size=(2**n_vois[i],)) for i in range(n)]
-        fun = lambda i: lambda x: \
-                        T[i][sum([x[neighs[i][j]] * 2**j for j in range(n_vois[i])])]
-        functs = [[fun(i) for i in range(n)]]
+        for i in range(n):
+            Lk = bit_list(n_vois[i])
+            symbols = [varnames[j] for j in neighs[i]]
+            minterms = []
+            for x in Lk:
+                if random.random() < .5:
+                    minterms.append(x)
+            functs.append(POSform(symbols, minterms))
         regulation = (neighs,)
-
+    functs = [functs]
     return PBN(title = f'Synthetic ({n},{k})-BN',
                n = n,
                indep = False,
@@ -1323,11 +1228,111 @@ def generateBN(n, k, sync, v = False, f = False, p = 0):
                sync = sync,
                p = p,
                q = 0,
-               regulation = regulation)
+               regulation = regulation,
+               varnames = varnames)
 
 
+def str_signed(v, f):
+    """Renvoie v si v est une variable activatrice de f,
+       et ~v si elle est inhibitrice.
+       Annexe à la fonction suivante."""
 
-def generatePBN(BN, i_modifs, p_ref, dist, q=1):
+    fs = str(f)
+    i = fs.index(str(v))
+    if (i==0) or (fs[i-1] != '~'): # variable activatrice
+        return str(v)
+    else: # variable inhibitrice
+        return '~' + str(v)
+
+
+def voisines_direct(F, cp):
+    """Calcule l'union des voisins directs d'une liste de fonctions booléennes.
+       Annexe à la fonction suivante.
+
+    Parameters
+    ----------
+    F : list
+        Liste de fonctions booléennes monotones.
+    cp :
+        Si cp == 'c' : on calcule les enfants.
+        Si cp == 'p' : on calcule les parents.
+
+    Returns
+    -------
+    set
+        Ensemble contenant chaque parent/enfant de chaque fonction de F.
+    """
+
+    s_voisinescp = set()
+    for f in F :
+        # On traduit la fonction monotone en l'ensemble de BitSets correspondant
+        fd = to_dnf(f, simplify = True)
+        symbs = list(fd.free_symbols)
+        formula_L = ([sorted([1+symbs.index(l) for l in list(eval(clause).free_symbols)])
+                                        for clause in str(fd).split('|')])
+        formula = str(formula_L).replace('[', '{').replace(']', '}').replace(' ', '')
+        symbs = [str_signed(v, fd) for v in symbs]
+
+        # On appelle le script Java 'functionhood'
+        gateway = JavaGateway()
+        hd = gateway.entry_point.getHasseDiagram()
+        hd.setSize(len(symbs))
+
+        if cp == 'c':
+            a = gateway.entry_point.getFormulaChildrenfromStr(formula, False)
+        else:
+            a = gateway.entry_point.getFormulaParentsfromStr(formula, False)
+
+        # On traduit la sortie de functionhood en une liste de fonctions booléennes
+        s_voisines = eval(str(a).replace('{', '[').replace('}', ']'))
+        f_voisine = [[[symbs[j-1] for j in clause] for clause in s] for s in s_voisines]
+        f_voisinescp = [eval(' | '.join(['(' + ' & '.join(clause) + ')' for clause in f])) for f in f_voisine]
+        s_voisinescp.update(f_voisinescp)
+    return s_voisinescp
+
+
+def voisines(f, dist):
+    """Calcule les fonctions voisines d'une fonction monotone
+       dans le diagramme de Hasse.
+       Annexe à la fonction suivante.
+
+    Parameters
+    ----------
+    f : sympy.Boolean
+        Une fonction booléenne monotone.
+    dist :
+        Distance maximale à explorer dans le diagramme de Hasse.
+
+    Returns
+    -------
+    list
+        Liste des listes de voisins à distance k, pour k de 1 à dist.
+    """
+
+    for v in f.free_symbols:
+        globals().__setitem__(str(v), v)
+
+    fd = to_dnf(f, simplify = True)
+    to_dnf_set = lambda s: [to_dnf(x, simplify = True) for x in list(s)]
+
+    # parents & enfants
+    f_parents = voisines_direct({f}, 'p')
+    f_enfants = voisines_direct({f}, 'c')
+    f_voisines = [to_dnf_set(f_parents.union(f_enfants))]
+
+    if dist >= 2: # siblings
+        f_siblings = voisines_direct(f_parents, 'c').union(voisines_direct(f_enfants, 'p'))
+        f_siblings.remove(fd)
+        f_voisines.append(to_dnf_set(f_siblings))
+
+        if dist == 3: # grands-parents & petits-enfants
+            f_gppe = voisines_direct(f_parents, 'p').union(voisines_direct(f_enfants, 'c'))
+            f_voisines.append(to_dnf_set(f_gppe))
+
+    return f_voisines
+
+
+def generate_Extended_PBN(BN, i_modifs = None, p_ref = 0.8, dist = 1, q=1):
     """Construit un PBN à partir des fonctions de référence d'un BN, étendues
     parmi leurs voisines dans le diagramme de Hasse.
 
@@ -1336,30 +1341,59 @@ def generatePBN(BN, i_modifs, p_ref, dist, q=1):
     BN : PBN
         Un réseau booléen, n'ayant donc qu'un seul contexte.
     i_modifs : list
-        Liste des indices des bits dont on veut étendre la fonction.
+        Liste des indices des bits dont on veut étendre les fonctions.
     p_ref : int
         Probabilité associée à la fonction de référence.
     dist :
         Distance maximale à explorer dans le diagramme de Hasse.
+        Si dist == 1 : explorer les parents + les enfants des fonctions.
+        Si dist == 2 : précédents + les siblings.
+        Si dist == 3 : précédents + les grands-parents + les petits-enfants.
 
     Returns
     -------
     PBN
     """
 
-    fcts_pbn = BN.fcts.copy()
-    c_pbn = BN.c.copy()
+    if i_modifs == None:
+        i_modifs = [i for i in range(BN.n)]
 
-    for i in i_modifs:
-        # récupérer dans f_voisines les voisins de f[i] à distance dist
-        #TODO
+    fcts_pbn = [[] for _ in range(BN.n)]
+    c_pbn = [[] for _ in range(BN.n)]
 
-        s = len(f_voisines)
-        fcts_pbn[i] = [fcts_pbn[i]] + f_voisines
-        c_pbn[i] = [p_ref] + [(1-p_ref)/s] * s
+    for i in range(BN.n):
+        if i in i_modifs:
+            f_voisines = voisines(BN.fcts[0][i], dist)
+            fcts_pbn[i] = [BN.fcts[0][i]] + flatten(f_voisines)
 
-    return BN.copy_PBN(title = title + 'extended', indep = True,
-                       f = fcts_pbn, c = c_pbn, q=q)
+            # On détermine le r tel que les voisins à distance k auront un poids r**k.
+            if dist == 1:
+                n0 = len(f_voisines[0])
+                r = (1 - p_ref)/n0
+                c_pbn[i] = [p_ref] + [round(r,6)] * n0
+
+            elif dist == 2:
+                n0, n1 = map(len, f_voisines)
+                x = var('x')
+                r = max(solve(Eq(n1*x**2 + n0*x - (1-p_ref), 0), x))
+                c_pbn[i] = [p_ref] + [round(r,6)] * n0 + [round(r**2,6)] * n1
+
+            elif dist == 3:
+                n0, n1, n2 = map(len, f_voisines)
+                x = var('x')
+                r = max(solve(Eq(n2*x**3 + n1*x**2 + n0*x - (1-p_ref), 0), x))
+                c_pbn[i] = [p_ref] + [round(r,6)] * n0 + [round(r**2,6)] * n1 + [round(r**3,6)] * n2
+
+        else:
+            fcts_pbn[i] = [BN.fcts[0][i]]
+            c_pbn[i] = [1]
+
+    if len(i_modifs) == BN.n:
+        mods = 'allv'
+    else:
+        mods = ''.join(map(str, i_modifs))
+    return BN.copy_PBN(title = f'{BN.title} extended_{mods}_{dist}',
+                       indep = True, fcts = fcts_pbn, c = c_pbn, q = q)
 
 
 
@@ -1383,44 +1417,63 @@ def generate_Random_PBN(m, n, k, indep, sync = True, p = 0, q = .1):
     PBN
     """
 
-    if k > n:
-        raise ValueError("Merci d'entrer un k<n.")
+    if k > n or k<=0:
+        raise ValueError("Merci d'entrer un 0 < k < n.")
 
-    nodes = [i for i in range(n)]
-    # Sélection de k voisins pour chaque gène
-    neighs = [sorted(random.sample(nodes, k)) for _ in range(n)]
-    # for i in nodes:
-    #     print('%s -> %i' %(neighs[i], i))
+    # Sélection des voisins de chaque gène
+    flag = True
+    while flag: # on fait que le graphe de régulation soit connexe
+        nodes = [i for i in range(n)]
+        neighs = [sorted(random.sample(nodes, k)) for i in range(n)]
+        edges = [(j, i) for i in nodes for j in neighs[i]]
+        G = nx.Graph()
+        G.add_nodes_from(nodes)
+        G.add_edges_from(edges)
+        flag = not nx.is_connected(G)
 
+    varnames = init_vars(n)
+
+    Lk = bit_list(k)
     if indep:
         # Génération d'un F = F1 x ... x Fn,
         # avec F_i les fonctions de transition possibles du i-ème gène.
-        fun = lambda i,j: lambda x: \
-                        T[i][j][sum([x[neighs[i][q]] * 2**q for q in range(k)])]
-
+        functs = [[] for _ in range(n)]
         if type(m)==int: # chaque gène a le même nombre m de fonctions
-            T = [[np.random.choice([0, 1], size=(2**k,)) for _ in range(m)]
-                                                         for _ in range(n)]
-            functs = [[fun(i,j) for j in range(m)] for i in range(n)]
-            # chaque choix de fonction est équiprobable
+            for i in range(n):
+                symbols = [varnames[j] for j in neighs[i]]
+                for j in range(m):
+                    minterms = []
+                    for x in Lk:
+                        if random.random() < .5:
+                            minterms.append(x)
+                    functs[i].append(POSform(symbols, minterms))
             c = [[1 / m for _ in range(m)] for _ in range(n)]
 
         else: # un noeud i a m[i] fonctions
             if len(m)!=n:
                 raise ValueError("La liste m doit être de longueur n.")
-            T = [[np.random.choice([0, 1], size=(2**k,)) for _ in range(m[i])]
-                                                            for i in range(n)]
-            functs = [[fun(i,j) for j in range(m[i])] for i in range(n)]
+            for i in range(n):
+                symbols = [varnames[j] for j in neighs[i]]
+                for j in range(m[i]):
+                    minterms = []
+                    for x in Lk:
+                        if random.random() < .5:
+                            minterms.append(x)
+                    functs[i].append(POSform(symbols, minterms))
             c = [[1 / (m[i]) for _ in range(m[i])] for i in range(n)]
 
     else: # Génération d'un F = [f_1, ..., f_m], avec f_i un contexte.
         if type(m)==list:
             raise ValueError("Merci d'entrer un m entier ou indep=True.")
-        fun = lambda i,j: lambda x: \
-                        T[i][j][sum([x[neighs[j][q]] * 2**q for q in range(k)])]
-        T = [[np.random.choice([0, 1], size=(2**k,)) for _ in range(n)]
-                                                     for _ in range(m)]
-        functs = [[fun(i,j) for j in range(n)] for i in range(m)]
+        functs = [[] for _ in range(m)]
+        for j in range(m):
+            for i in range(n):
+                symbols = [varnames[j] for j in neighs[i]]
+                minterms = []
+                for x in Lk:
+                    if random.random() < .5:
+                        minterms.append(x)
+                functs[j].append(POSform(symbols, minterms))
         c = [1 / m for _ in range(m)]
 
     return PBN(title = f'Synthetic ({m},{n},{k})-PBN',
@@ -1431,14 +1484,11 @@ def generate_Random_PBN(m, n, k, indep, sync = True, p = 0, q = .1):
                sync = sync,
                p = p,
                q = q,
-               regulation = (neighs,))
+               regulation = (neighs,),
+               varnames = varnames)
 
 
 
-
-#TODO : sauvegarder un PBN et des prints console dans un fichier texte
-
-#TODO : functionhood.getFormulaChildren/Parents, dans GeneratePBN avec Py4J
 #TODO : autre version du code avec appels Py4J sur le getAttractors de BioLQM ?
 
 #TODO : rédiger la démo sur |BOA| merde

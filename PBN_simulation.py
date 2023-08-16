@@ -16,7 +16,6 @@ from py4j.java_gateway import JavaGateway
 import random
 
 
-
 ########### PARTIE 1 / 3 - UTILITY FUNCTIONS ##########
 
 def init_vars(n: int):
@@ -1275,8 +1274,7 @@ def voisines_direct(F, cp):
 
         # On appelle le script Java 'functionhood'
         gateway = JavaGateway()
-        hd = gateway.entry_point.getHasseDiagram()
-        hd.setSize(len(symbs))
+        hd = gateway.entry_point.initHasseDiagram(len(symbs))
 
         if cp == 'c':
             a = gateway.entry_point.getFormulaChildrenfromStr(formula, False)
@@ -1332,7 +1330,7 @@ def voisines(f, dist):
     return f_voisines
 
 
-def generate_Extended_PBN(BN, i_modifs = None, p_ref = 0.8, dist = 1, q=1):
+def generate_Extended_PBN(BN, i_modifs = None, p_ref = 0.8, dist = 1, part = 'poly', q=1):
     """Construit un PBN à partir des fonctions de référence d'un BN, étendues
     parmi leurs voisines dans le diagramme de Hasse.
 
@@ -1349,6 +1347,11 @@ def generate_Extended_PBN(BN, i_modifs = None, p_ref = 0.8, dist = 1, q=1):
         Si dist == 1 : explorer les parents + les enfants des fonctions.
         Si dist == 2 : précédents + les siblings.
         Si dist == 3 : précédents + les grands-parents + les petits-enfants.
+    part :
+        Modèle de partitionnement des voisins en fonction de la distance.
+        Si part == 'poly' : les voisins à distance k ont un poids r**k
+        Si part == 'div' : les voisins à distance k ont un poids r/k
+        Si part == 'equal' : les voisins ont tous le même poids
 
     Returns
     -------
@@ -1366,27 +1369,35 @@ def generate_Extended_PBN(BN, i_modifs = None, p_ref = 0.8, dist = 1, q=1):
             f_voisines = voisines(BN.fcts[0][i], dist)
             fcts_pbn[i] = [BN.fcts[0][i]] + flatten(f_voisines)
 
-            # On détermine le r tel que les voisins à distance k auront un poids r**k.
-            if dist == 1:
-                n0 = len(f_voisines[0])
-                r = (1 - p_ref)/n0
-                c_pbn[i] = [p_ref] + [round(r,6)] * n0
+            ns = [len(v) for v in f_voisines]
+            if any(ns):
+                c_pbn[i] = [p_ref]
+                if part == 'poly':
+                    # On détermine le r tel que les voisins à distance k auront un poids r**k
+                    x = var('x')
+                    sols = solve(Eq(sum([ns[i]*x**(i+1) for i in range(dist)]), 1),x)
+                    r = max(list(filter(lambda x: 'I' not in str(x), sols)))
+                    for k in range(dist):
+                        c_pbn[i] += [round((1-p_ref) * r**(k + 1), 6)] * ns[k]
 
-            elif dist == 2:
-                n0, n1 = map(len, f_voisines)
-                x = var('x')
-                r = max(solve(Eq(n1*x**2 + n0*x - (1-p_ref), 0), x))
-                c_pbn[i] = [p_ref] + [round(r,6)] * n0 + [round(r**2,6)] * n1
+                if part == 'div':
+                    # On détermine le r tel que les voisins à distance k auront un poids r/k
+                    r = 1/(sum([ns[k] / (k + 1) for k in range(dist)]))
+                    for k in range(dist):
+                        c_pbn[i] += [round((1-p_ref) * r/(k + 1), 6)] * ns[k]
 
-            elif dist == 3:
-                n0, n1, n2 = map(len, f_voisines)
-                x = var('x')
-                r = max(solve(Eq(n2*x**3 + n1*x**2 + n0*x - (1-p_ref), 0), x))
-                c_pbn[i] = [p_ref] + [round(r,6)] * n0 + [round(r**2,6)] * n1 + [round(r**3,6)] * n2
+                if part == 'equal':
+                    # On détermine le r tel que tous les voisins ont le même poids
+                    r = 1/(sum(ns))
+                    c_pbn[i] += [round((1-p_ref) * r, 6)] * sum(ns)
+
+            else:
+                c_pbn[i] = [1]
 
         else:
             fcts_pbn[i] = [BN.fcts[0][i]]
             c_pbn[i] = [1]
+
 
     if len(i_modifs) == BN.n:
         mods = 'allv'

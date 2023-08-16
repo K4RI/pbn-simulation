@@ -1,7 +1,6 @@
 package org.colomoto.function.core;
 
 import java.util.BitSet;
-import java.util.HashSet;
 import java.util.Set;
 
 /**
@@ -125,15 +124,5 @@ System.out.println(" " + this + " contains? any of " + sClauses);
 //			s += this.signature.get(i) ? i+1 : "";
 		}
 		return s + "}";
-	}
-
-	public Set<Integer> toSet() {
-		Set<Integer> s = new HashSet<Integer>();
-		for (int i = 0; i < this.size; i++) {
-			if (this.signature.get(i)) {
-				s.add(i + 1);
-			}
-		}
-		return s;
 	}
 }

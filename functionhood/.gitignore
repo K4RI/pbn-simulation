@@ -1,0 +1,15 @@
+# OS and temp related
+.DS_Store
+*~
+.*.swp
+
+# Eclipse related
+.settings
+.project
+.classpath
+
+# build files
+bin
+build
+target
+

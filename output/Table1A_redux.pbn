@@ -5,68 +5,68 @@ init = 00100000000000000000000
 indep = 1
 
 targets, factors
-GATA3, (!GATA3 & STAT6 & !Tbet) | (GATA3 & !STAT6 & !Tbet) | (GATA3 & STAT6 & !Tbet), 0.8
-GATA3, (GATA3 & STAT6 & !Tbet), 0.1
-GATA3, (!GATA3 & STAT6 & !Tbet) | (GATA3 & !STAT6 & !Tbet) | (GATA3 & STAT6 & !Tbet) | (GATA3 & STAT6 & Tbet), 0.1
+GATA3, !Tbet & (GATA3 | STAT6), 0.8
+GATA3, GATA3 & STAT6 & !Tbet, 0.1
+GATA3, (GATA3 & STAT6) | (GATA3 & !Tbet) | (STAT6 & !Tbet), 0.1
 
-IFNbR, (IFNb), 1.0
+IFNbR, IFNb, 1.0
 
-IFNg, (!IRAK & !NFAT & !STAT3 & !STAT4 & Tbet) | (!IRAK & !NFAT & !STAT3 & STAT4 & !Tbet) | (!IRAK & !NFAT & !STAT3 & STAT4 & Tbet) | (!IRAK & NFAT & !STAT3 & !STAT4 & !Tbet) | (!IRAK & NFAT & !STAT3 & !STAT4 & Tbet) | (!IRAK & NFAT & !STAT3 & STAT4 & !Tbet) | (!IRAK & NFAT & !STAT3 & STAT4 & Tbet) | (IRAK & !NFAT & !STAT3 & !STAT4 & !Tbet) | (IRAK & !NFAT & !STAT3 & !STAT4 & Tbet) | (IRAK & !NFAT & !STAT3 & STAT4 & !Tbet) | (IRAK & !NFAT & !STAT3 & STAT4 & Tbet) | (IRAK & NFAT & !STAT3 & !STAT4 & !Tbet) | (IRAK & NFAT & !STAT3 & !STAT4 & Tbet) | (IRAK & NFAT & !STAT3 & STAT4 & !Tbet) | (IRAK & NFAT & !STAT3 & STAT4 & Tbet), 0.8
-IFNg, (!IRAK & !NFAT & !STAT3 & !STAT4 & Tbet) | (!IRAK & !NFAT & !STAT3 & STAT4 & !Tbet) | (!IRAK & !NFAT & !STAT3 & STAT4 & Tbet) | (!IRAK & !NFAT & STAT3 & !STAT4 & !Tbet) | (!IRAK & !NFAT & STAT3 & !STAT4 & Tbet) | (!IRAK & !NFAT & STAT3 & STAT4 & !Tbet) | (!IRAK & !NFAT & STAT3 & STAT4 & Tbet) | (!IRAK & NFAT & !STAT3 & !STAT4 & !Tbet) | (!IRAK & NFAT & !STAT3 & !STAT4 & Tbet) | (!IRAK & NFAT & !STAT3 & STAT4 & !Tbet) | (!IRAK & NFAT & !STAT3 & STAT4 & Tbet) | (!IRAK & NFAT & STAT3 & !STAT4 & !Tbet) | (!IRAK & NFAT & STAT3 & !STAT4 & Tbet) | (!IRAK & NFAT & STAT3 & STAT4 & !Tbet) | (!IRAK & NFAT & STAT3 & STAT4 & Tbet) | (IRAK & NFAT & STAT3 & STAT4 & Tbet), 0.02857
-IFNg, (!IRAK & !NFAT & !STAT3 & !STAT4 & Tbet) | (!IRAK & !NFAT & !STAT3 & STAT4 & !Tbet) | (!IRAK & !NFAT & !STAT3 & STAT4 & Tbet) | (!IRAK & !NFAT & STAT3 & !STAT4 & Tbet) | (!IRAK & !NFAT & STAT3 & STAT4 & !Tbet) | (!IRAK & !NFAT & STAT3 & STAT4 & Tbet) | (!IRAK & NFAT & !STAT3 & !STAT4 & Tbet) | (!IRAK & NFAT & !STAT3 & STAT4 & !Tbet) | (!IRAK & NFAT & !STAT3 & STAT4 & Tbet) | (!IRAK & NFAT & STAT3 & !STAT4 & !Tbet) | (!IRAK & NFAT & STAT3 & !STAT4 & Tbet) | (!IRAK & NFAT & STAT3 & STAT4 & !Tbet) | (!IRAK & NFAT & STAT3 & STAT4 & Tbet), 0.02857
-IFNg, (!IRAK & !NFAT & !STAT3 & !STAT4 & Tbet) | (!IRAK & !NFAT & !STAT3 & STAT4 & Tbet) | (!IRAK & !NFAT & STAT3 & !STAT4 & !Tbet) | (!IRAK & !NFAT & STAT3 & !STAT4 & Tbet) | (!IRAK & !NFAT & STAT3 & STAT4 & !Tbet) | (!IRAK & !NFAT & STAT3 & STAT4 & Tbet) | (!IRAK & NFAT & !STAT3 & !STAT4 & Tbet) | (!IRAK & NFAT & !STAT3 & STAT4 & !Tbet) | (!IRAK & NFAT & !STAT3 & STAT4 & Tbet) | (!IRAK & NFAT & STAT3 & !STAT4 & !Tbet) | (!IRAK & NFAT & STAT3 & !STAT4 & Tbet) | (!IRAK & NFAT & STAT3 & STAT4 & !Tbet) | (!IRAK & NFAT & STAT3 & STAT4 & Tbet), 0.02857
-IFNg, (!IRAK & !NFAT & !STAT3 & STAT4 & !Tbet) | (!IRAK & !NFAT & !STAT3 & STAT4 & Tbet) | (!IRAK & !NFAT & STAT3 & !STAT4 & !Tbet) | (!IRAK & !NFAT & STAT3 & !STAT4 & Tbet) | (!IRAK & !NFAT & STAT3 & STAT4 & !Tbet) | (!IRAK & !NFAT & STAT3 & STAT4 & Tbet) | (!IRAK & NFAT & !STAT3 & !STAT4 & Tbet) | (!IRAK & NFAT & !STAT3 & STAT4 & !Tbet) | (!IRAK & NFAT & !STAT3 & STAT4 & Tbet) | (!IRAK & NFAT & STAT3 & !STAT4 & !Tbet) | (!IRAK & NFAT & STAT3 & !STAT4 & Tbet) | (!IRAK & NFAT & STAT3 & STAT4 & !Tbet) | (!IRAK & NFAT & STAT3 & STAT4 & Tbet), 0.02857
-IFNg, (!IRAK & !NFAT & !STAT3 & !STAT4 & Tbet) | (!IRAK & !NFAT & !STAT3 & STAT4 & Tbet) | (!IRAK & !NFAT & STAT3 & !STAT4 & Tbet) | (!IRAK & !NFAT & STAT3 & STAT4 & !Tbet) | (!IRAK & !NFAT & STAT3 & STAT4 & Tbet) | (!IRAK & NFAT & !STAT3 & !STAT4 & !Tbet) | (!IRAK & NFAT & !STAT3 & !STAT4 & Tbet) | (!IRAK & NFAT & !STAT3 & STAT4 & !Tbet) | (!IRAK & NFAT & !STAT3 & STAT4 & Tbet) | (!IRAK & NFAT & STAT3 & !STAT4 & !Tbet) | (!IRAK & NFAT & STAT3 & !STAT4 & Tbet) | (!IRAK & NFAT & STAT3 & STAT4 & !Tbet) | (!IRAK & NFAT & STAT3 & STAT4 & Tbet), 0.02857
-IFNg, (!IRAK & !NFAT & !STAT3 & STAT4 & !Tbet) | (!IRAK & !NFAT & !STAT3 & STAT4 & Tbet) | (!IRAK & !NFAT & STAT3 & !STAT4 & Tbet) | (!IRAK & !NFAT & STAT3 & STAT4 & !Tbet) | (!IRAK & !NFAT & STAT3 & STAT4 & Tbet) | (!IRAK & NFAT & !STAT3 & !STAT4 & !Tbet) | (!IRAK & NFAT & !STAT3 & !STAT4 & Tbet) | (!IRAK & NFAT & !STAT3 & STAT4 & !Tbet) | (!IRAK & NFAT & !STAT3 & STAT4 & Tbet) | (!IRAK & NFAT & STAT3 & !STAT4 & !Tbet) | (!IRAK & NFAT & STAT3 & !STAT4 & Tbet) | (!IRAK & NFAT & STAT3 & STAT4 & !Tbet) | (!IRAK & NFAT & STAT3 & STAT4 & Tbet), 0.02857
-IFNg, (!IRAK & !NFAT & !STAT3 & STAT4 & Tbet) | (!IRAK & !NFAT & STAT3 & !STAT4 & !Tbet) | (!IRAK & !NFAT & STAT3 & !STAT4 & Tbet) | (!IRAK & !NFAT & STAT3 & STAT4 & !Tbet) | (!IRAK & !NFAT & STAT3 & STAT4 & Tbet) | (!IRAK & NFAT & !STAT3 & !STAT4 & !Tbet) | (!IRAK & NFAT & !STAT3 & !STAT4 & Tbet) | (!IRAK & NFAT & !STAT3 & STAT4 & !Tbet) | (!IRAK & NFAT & !STAT3 & STAT4 & Tbet) | (!IRAK & NFAT & STAT3 & !STAT4 & !Tbet) | (!IRAK & NFAT & STAT3 & !STAT4 & Tbet) | (!IRAK & NFAT & STAT3 & STAT4 & !Tbet) | (!IRAK & NFAT & STAT3 & STAT4 & Tbet), 0.02857
+IFNg, (IRAK & !STAT3) | (NFAT & !IRAK & !STAT3) | (STAT4 & !IRAK & !NFAT & !STAT3) | (Tbet & !IRAK & !NFAT & !STAT3 & !STAT4), 0.8
+IFNg, (NFAT & !IRAK) | (STAT3 & !IRAK) | (STAT4 & !IRAK) | (Tbet & !IRAK) | (NFAT & STAT3 & STAT4 & Tbet), 0.02857
+IFNg, (STAT4 & !IRAK) | (Tbet & !IRAK) | (NFAT & STAT3 & !IRAK), 0.02857
+IFNg, (STAT3 & !IRAK) | (Tbet & !IRAK) | (NFAT & STAT4 & !IRAK), 0.02857
+IFNg, (STAT3 & !IRAK) | (STAT4 & !IRAK) | (NFAT & Tbet & !IRAK), 0.02857
+IFNg, (NFAT & !IRAK) | (Tbet & !IRAK) | (STAT3 & STAT4 & !IRAK), 0.02857
+IFNg, (NFAT & !IRAK) | (STAT4 & !IRAK) | (STAT3 & Tbet & !IRAK), 0.02857
+IFNg, (NFAT & !IRAK) | (STAT3 & !IRAK) | (STAT4 & Tbet & !IRAK), 0.02857
 
-IFNgR, (IFNg), 1.0
+IFNgR, IFNg, 1.0
 
-IL10, (GATA3), 1.0
+IL10, GATA3, 1.0
 
-IL10R, (IL10), 1.0
+IL10R, IL10, 1.0
 
-IL12R, (!STAT6 & IL12), 0.8
-IL12R, (!STAT6 & !IL12) | (!STAT6 & IL12) | (STAT6 & IL12), 0.2
+IL12R, IL12 & !STAT6, 0.8
+IL12R, IL12 | !STAT6, 0.2
 
-IL18R, (!STAT6 & IL18), 0.8
-IL18R, (!STAT6 & !IL18) | (!STAT6 & IL18) | (STAT6 & IL18), 0.2
+IL18R, IL18 & !STAT6, 0.8
+IL18R, IL18 | !STAT6, 0.2
 
-IL4, (GATA3 & !STAT1), 0.8
-IL4, (!GATA3 & !STAT1) | (GATA3 & !STAT1) | (GATA3 & STAT1), 0.2
+IL4, GATA3 & !STAT1, 0.8
+IL4, GATA3 | !STAT1, 0.2
 
-IL4R, (IL4 & !SOCS1), 0.8
-IL4R, (!IL4 & !SOCS1) | (IL4 & !SOCS1) | (IL4 & SOCS1), 0.2
+IL4R, IL4 & !SOCS1, 0.8
+IL4R, IL4 | !SOCS1, 0.2
 
-IRAK, (IL18R), 1.0
+IRAK, IL18R, 1.0
 
-JAK1, (IFNgR & !SOCS1), 0.8
-JAK1, (!IFNgR & !SOCS1) | (IFNgR & !SOCS1) | (IFNgR & SOCS1), 0.2
+JAK1, IFNgR & !SOCS1, 0.8
+JAK1, IFNgR | !SOCS1, 0.2
 
-NFAT, (TCR), 1.0
+NFAT, TCR, 1.0
 
-SOCS1, (STAT1 & Tbet), 0.2
-SOCS1, (!STAT1 & Tbet) | (STAT1 & !Tbet) | (STAT1 & Tbet), 0.8
+SOCS1, STAT1 & Tbet, 0.2
+SOCS1, STAT1 | Tbet, 0.8
 
-STAT1, (!IFNbR & JAK1) | (IFNbR & !JAK1) | (IFNbR & JAK1), 0.8
-STAT1, (IFNbR & JAK1), 0.2
+STAT1, IFNbR | JAK1, 0.8
+STAT1, IFNbR & JAK1, 0.2
 
-STAT3, (IL10R), 1.0
+STAT3, IL10R, 1.0
 
-STAT4, (!GATA3 & IL12R), 0.8
-STAT4, (!GATA3 & !IL12R) | (!GATA3 & IL12R) | (GATA3 & IL12R), 0.2
+STAT4, IL12R & !GATA3, 0.8
+STAT4, IL12R | !GATA3, 0.2
 
-STAT6, (IL4R), 1.0
+STAT6, IL4R, 1.0
 
-Tbet, (!GATA3 & !STAT1 & Tbet) | (!GATA3 & STAT1 & !Tbet) | (!GATA3 & STAT1 & Tbet), 0.8
-Tbet, (!GATA3 & STAT1 & Tbet), 0.1
-Tbet, (!GATA3 & !STAT1 & Tbet) | (!GATA3 & STAT1 & !Tbet) | (!GATA3 & STAT1 & Tbet) | (GATA3 & STAT1 & Tbet), 0.1
+Tbet, !GATA3 & (STAT1 | Tbet), 0.8
+Tbet, STAT1 & Tbet & !GATA3, 0.1
+Tbet, (STAT1 & Tbet) | (STAT1 & !GATA3) | (Tbet & !GATA3), 0.1
 
-IFNb, (IFNb), 1.0
+IFNb, IFNb, 1.0
 
-IL12, (IL12), 1.0
+IL12, IL12, 1.0
 
-IL18, (IL18), 1.0
+IL18, IL18, 1.0
 
-TCR, (TCR), 1.0
+TCR, TCR, 1.0
 

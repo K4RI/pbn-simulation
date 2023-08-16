@@ -1,16 +1,24 @@
 ##
 from py4j.java_gateway import JavaGateway
+import psutil
+import subprocess
+import time
+
+
+proc = subprocess.Popen(["java", "-jar", "functionhood/target/FunctionHood-0.1.jar"], stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
 
 gateway = JavaGateway()
 
-hd = gateway.entry_point.getHasseDiagram()
-hd.setSize(3)
+hd = gateway.entry_point.initHasseDiagram(3)
 print(hd.getSize())
-
-gateway.entry_point.printHello()
 
 a = gateway.entry_point.getFormulaParentsfromStr("{{1,2},{1,3},{2,3}}", True)
 print(a)
+
+
+print(psutil.Process(proc.pid).ppid())
+time.sleep(2)
+psutil.Process(proc.pid).children()[0].terminate()
 
 ##
 from PBN_simulation import str_signed, voisines_direct, voisines
@@ -30,3 +38,37 @@ vois = voisines(f, dist=3)
 for vo in vois:
     for v in vo: print(v)
     print()
+
+##
+from sympy import var, Eq, solve
+
+ns = [3,2,3]
+dist, p_ref = len(ns), 0.8
+c_pbn = [p_ref]
+part = 'div'
+
+if any(ns):
+    if part == 'poly':
+        # On détermine le r tel que les voisins à distance k auront un poids r**k
+        x = var('x')
+        sols = solve(Eq(sum([ns[i]*x**(i+1) for i in range(dist)]), 1),x)
+        r = max(list(filter(lambda x: 'I' not in str(x), sols)))
+        c_pbn = [p_ref]
+        for k in range(dist):
+            c_pbn += [round((1-p_ref) * r**(k + 1), 6)] * ns[k]
+
+    if part == 'div':
+        # On détermine le r tel que les voisins à distance k auront un poids r/k
+        r = 1/(sum([ns[k] / (k + 1) for k in range(dist)]))
+        c_pbn = [p_ref]
+        for k in range(dist):
+            c_pbn += [round((1-p_ref) * r/(k + 1), 6)] * ns[k]
+
+    if part == 'equal':
+        r = 1/(sum(ns))
+        c_pbn = [p_ref]
+        c_pbn += [round((1-p_ref) * r, 6)] * sum(ns)
+
+print(c_pbn)
+
+##

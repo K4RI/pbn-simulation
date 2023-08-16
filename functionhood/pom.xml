@@ -60,6 +60,13 @@
 			<version>2.1</version>
 		</dependency>
 
+
+		<dependency>
+			<groupId>net.sf.py4j</groupId>
+			<artifactId>py4j</artifactId>
+			<version>0.10.9.7</version>
+		</dependency>
+
   </dependencies>
 
 
@@ -86,10 +93,27 @@
 								<addClasspath>true</addClasspath>
 								<classpathPrefix>lib/</classpathPrefix>
 								<useUniqueVersions>false</useUniqueVersions>
-								<mainClass>org.colomoto.function.GetFunctionNeighbours</mainClass>
+								<mainClass>org.colomoto.function.FunctionHoodEntryPoint</mainClass>
 							</manifest>
 						</archive>
 					</configuration>
+				</plugin>
+
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-shade-plugin</artifactId>
+					<version>3.4.1</version>
+					<configuration>
+						<createDependencyReducedPom>false</createDependencyReducedPom>
+					</configuration>
+					<executions>
+						<execution>
+							<phase>package</phase>
+							<goals>
+								<goal>shade</goal>
+							</goals>
+						</execution>
+					</executions>
 				</plugin>
 
 			</plugins>

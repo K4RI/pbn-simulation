@@ -33,11 +33,6 @@ public class HasseDiagram {
 		this.powerSet = new PowerSetGraph(nvars);
 	}
 
-	public void setSize(int nvars) {
-		this.nvars = nvars;
-		this.powerSet = new PowerSetGraph(nvars);
-	}
-
 	public int getSize() {
 		return this.nvars;
 	}

@@ -190,8 +190,7 @@ def test_filesPBN():
 
 def test_extended_PBN():
 
-    bns = [generateBN(5, 2, sync = True, v = False, f = True, p = 0),
-          generateBN(9, 4, sync = True, v = False, f = True, p = 0)]
+    bns = [generateBN(10, 4, sync = True, v = False, f = True, p = 0)]
 
     for bn in bns:
         print(bn)

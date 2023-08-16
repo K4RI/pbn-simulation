@@ -1,0 +1,7 @@
+{
+    "installOptions": {
+        "installFromRepository": true,
+        "libraryPath": "/home/chaouiya/R/x86_64-redhat-linux-gnu-library/4.0",
+        "installDependencies": true
+    }
+}

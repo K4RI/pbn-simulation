@@ -3,7 +3,6 @@ package org.colomoto.function;
 import org.colomoto.function.core.Clause;
 import org.colomoto.function.core.Formula;
 import org.colomoto.function.core.HasseDiagram;
-import org.colomoto.function.GetFunctionNeighbours;
 import py4j.GatewayServer;
 
 import java.util.BitSet;
@@ -18,7 +17,8 @@ public class FunctionHoodEntryPoint {
         hd = new HasseDiagram(1);
     }
 
-    public HasseDiagram getHasseDiagram() {
+    public HasseDiagram initHasseDiagram(int nvars) {
+        hd = new HasseDiagram(nvars);
         return hd;
     }
 
@@ -31,7 +31,7 @@ public class FunctionHoodEntryPoint {
         for (Formula parent : Parents) {
             Set<Set<Integer>> sParent = new HashSet<Set<Integer>>();
             for (Clause c : parent.getClauses()){
-                sParent.add(c.toSet());
+                sParent.add(toSet(c));
             }
             sParents.add(sParent);
         }
@@ -47,11 +47,21 @@ public class FunctionHoodEntryPoint {
         for (Formula children : Children) {
             Set<Set<Integer>> sChild = new HashSet<Set<Integer>>();
             for (Clause c : children.getClauses()){
-                sChild.add(c.toSet());
+                sChild.add(toSet(c));
             }
             sChildren.add(sChild);
         }
         return sChildren;
+    }
+
+    public Set<Integer> toSet(Clause c) {
+        Set<Integer> s = new HashSet<Integer>();
+        for (int i = 0; i < hd.getSize(); i++) {
+            if (c.getSignature().get(i)) {
+                s.add(i + 1);
+            }
+        }
+        return s;
     }
 
     private static Clause parseClause(int n, String s) throws NumberFormatException {

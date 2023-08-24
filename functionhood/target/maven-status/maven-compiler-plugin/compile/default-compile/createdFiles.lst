@@ -1,0 +1,7 @@
+org\colomoto\function\core\Formula.class
+org\colomoto\function\core\Clause.class
+org\colomoto\function\FunctionHoodEntryPoint.class
+org\colomoto\function\core\PowerSetGraph.class
+org\colomoto\function\GetFunctionNeighbours$1.class
+org\colomoto\function\GetFunctionNeighbours.class
+org\colomoto\function\core\HasseDiagram.class

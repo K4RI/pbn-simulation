@@ -1,0 +1,1 @@
+FOR /f "tokens=2 delims=G" %%G IN ('netstat -ano ^| findstr 25333') DO taskkill /pid %%G /F

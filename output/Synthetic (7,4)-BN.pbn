@@ -1,0 +1,15 @@
+sync = 1
+p = 0
+q = 0
+init = *******
+indep = 0
+
+targets, factors
+x0, (x0 | x1) & !(x2 | x6)
+x1, x3 & !(x2 | x4 | x6)
+x2, (x2 | x6) & !(x1 | x3)
+x3, (x1 | x2) & !(x0 | x5)
+x4, (x1 | x6) & !(x2 | x3)
+x5, (x2 | x3) & !(x0 | x1)
+x6, (x1 | x4) & !(x3 | x5)
+

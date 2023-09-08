@@ -443,6 +443,12 @@ s_fcts, s_ctxtbls, str(self.c), str(self.x), s_ctxt, s_ctxtbl)
                                             for f in ff]) for ff in F]))
         return s
 
+    def str_functs(self) -> list:
+        """Table des expressions des fonctions de régulation."""
+
+        print('\n\n'.join(['\n'.join([str(f) for f in ff]) for ff in self.fcts]))
+
+
 
     def copy_PBN(self, title = None, n = None, indep = None, fcts = None,
                  c = None, sync = None, p = None, q = None, varnames = None,
@@ -452,7 +458,7 @@ s_fcts, s_ctxtbls, str(self.c), str(self.x), s_ctxt, s_ctxtbl)
         Parameters
         ----------
         args :
-            Arguments à modifier.
+            Attributs du modèle à modifier.
 
         Returns
         -------
@@ -1105,8 +1111,7 @@ s_fcts, s_ctxtbls, str(self.c), str(self.x), s_ctxt, s_ctxtbl)
 
 
 
-def file_to_PBN(filename, title=None, sync = True, indep = True, p = 0, q = 1,
-                zeroes = [], ones = []):
+def file_to_PBN(filename, title=None):
     """Crée un PBN à partir d'une description dans un fichier de forme :
     sync = (0 ou 1)
     p = (float entre 0 et 1)
@@ -1131,7 +1136,7 @@ def file_to_PBN(filename, title=None, sync = True, indep = True, p = 0, q = 1,
         Nom du fichier à charger. Chaque ligne est de la forme
         'nom_variable, fonction, proba_fonction'
     args :
-        Attributs du PBN décrits plus haut.
+        Attributs par défaut du PBN décrits plus haut, s'ils ne sont pas
 
 
     Returns
@@ -1150,12 +1155,18 @@ def file_to_PBN(filename, title=None, sync = True, indep = True, p = 0, q = 1,
     if lines_param[start][:4] == 'sync':
         sync = bool(int(lines_param[start].split('= ')[1]))
         start += 1
+    else:
+        sync = True
     if lines_param[start][0] == 'p':
         p = float(lines_param[start].split('= ')[1])
         start += 1
+    else:
+        p = 0
     if lines_param[start][0] == 'q':
         q = float(lines_param[start].split('= ')[1])
         start += 1
+    else:
+        q = 1
     if lines_param[start][:4] == 'init':
         zeroes, ones = [], []
         card = lines_param[start].split('= ')[1]
@@ -1163,9 +1174,13 @@ def file_to_PBN(filename, title=None, sync = True, indep = True, p = 0, q = 1,
             if card[i]=='0': zeroes.append(i)
             if card[i]=='1': ones.append(i)
         start += 1
+    else:
+        zeroes, ones = [], []
     if lines_param[start][:5] == 'indep':
         indep = bool(int(lines_param[start].split('= ')[1]))
         start += 1
+    else:
+        indep = True
 
     lines = text.split('\n')
     varnames = []
@@ -1242,32 +1257,26 @@ def file_to_PBN(filename, title=None, sync = True, indep = True, p = 0, q = 1,
 
 ########### PARTIE 3/3 - GÉNÉRATEURS ##########
 
-def generateBN(n, k, sync, v = False, f = False, p = 0):
-    """Construit un BN dont chacun des n nœuds est régulé par k voisins ou moins.
+
+def generateGraph(n, k, v):
+    """ Génère un graphe de régulation.
+        Annexe à generateBN() et generate_Random_PBN().
 
     Parameters
     ----------
     n : int
-        Nombre de bits décrivant un état du BN.
+        Nombre de gènes.
     k : int
         Nombre de voisins de chaque bit/gène dans le graphe de régulation.
     v : bool
         Si False, tous les gènes ont k voisins.
         Si True, le nombre de voisins de chaque gène est tiré entre 0 et k.
-    f : bool
-        Si False, les fonctions de régulation sont tirées au hasard.
-        Si True, on tire des vecteurs de régulation +/-, et la fonction de
-        régulation est celle par défaut (cf. Mendoza2006 équation 1).
-    args (sync, p) :
-        Attributs du PBN décrits plus haut.
 
     Returns
     -------
-    PBN
+    list
+        Liste d'adjacence du graphe.
     """
-    #TODO : option canalyzing functions (x_i=u => f(x)=y) : f(x) = x_i ^/v h(x) ?
-
-    varnames = init_vars(n)
 
     flag = True
     while flag: # on fait que le graphe de régulation soit connexe
@@ -1286,12 +1295,18 @@ def generateBN(n, k, sync, v = False, f = False, p = 0):
         G.add_nodes_from(nodes)
         G.add_edges_from(edges)
         flag = not nx.is_connected(G)
+    return neighs
 
-    for i in nodes:
-        print('%s -> %i' %(neighs[i], i))
-    print()
 
+def generateBNfromGraph(neighs, f, sync, p):
+    """ Génère un BN à partir d'un graphe de régulation.
+        Annexe à generateBN().
+    """
+
+    n = len(neighs)
+    n_vois = [len(neighs[i]) for i in range(n)]
     functs = []
+    varnames = init_vars(n)
     # Pour chaque gène i de voisins i_1 ... i_ki,
     if f:
         # Détermination des régulations négatives et positives
@@ -1339,7 +1354,8 @@ def generateBN(n, k, sync, v = False, f = False, p = 0):
                 functs.append(random_BoolFunc(Lk, symbols, varnames, i))
         regulation = (neighs,)
     functs = [functs]
-    return PBN(title = f'Synthetic ({n},{k})-BN',
+
+    return PBN(title = f'Synthetic ({n},{max(n_vois)})-BN',
                n = n,
                indep = False,
                f = functs,
@@ -1349,6 +1365,41 @@ def generateBN(n, k, sync, v = False, f = False, p = 0):
                q = 0,
                regulation = regulation,
                varnames = varnames)
+
+
+
+def generateBN(n, k, sync, v = False, f = False, p = 0):
+    """Construit un BN dont chacun des n nœuds est régulé par k voisins ou moins.
+
+    Parameters
+    ----------
+    n : int
+        Nombre de bits décrivant un état du BN.
+    k : int
+        Nombre de voisins de chaque bit/gène dans le graphe de régulation.
+    v : bool
+        Si False, tous les gènes ont k voisins.
+        Si True, le nombre de voisins de chaque gène est tiré entre 0 et k.
+    f : bool
+        Si False, les fonctions de régulation sont tirées au hasard.
+        Si True, on tire des vecteurs de régulation +/-, et la fonction de
+        régulation est celle par défaut (cf. Mendoza2006 équation 1).
+    args (sync, p) :
+        Attributs du PBN décrits plus haut.
+
+    Returns
+    -------
+    PBN
+    """
+    #TODO : option canalyzing functions (x_i=u => f(x)=y) : f(x) = x_i ^/v h(x) ?
+
+    neighs = generateGraph(n, k, v)
+
+    for i in range(n):
+        print('%s -> %i' %(neighs[i], i))
+    print()
+
+    return generateBNfromGraph(neighs, f, sync, p)
 
 
 def str_signed(v, f):
@@ -1457,7 +1508,7 @@ def voisines(f, dist):
     return f_voisines
 
 
-def generate_Extended_PBN(BN, i_modifs = None, p_ref = 0.8, dist = 1, part = 'poly', q=1):
+def generate_Extended_PBN(BN, i_modifs = None, p_ref = 0.8, dist = 1, part = 'poly', q = 1):
     """Construit un PBN à partir des fonctions de référence d'un BN, étendues
     parmi leurs voisines dans le diagramme de Hasse.
 
@@ -1475,7 +1526,7 @@ def generate_Extended_PBN(BN, i_modifs = None, p_ref = 0.8, dist = 1, part = 'po
         Si dist == 2 : précédents + les siblings.
         Si dist == 3 : précédents + les grands-parents + les petits-enfants.
     part :
-        Modèle de partitionnement des voisins en fonction de la distance.
+        Type de partitionnement des voisins en fonction de la distance.
         Si part == 'poly' : les voisins à distance k ont un poids r**k
         Si part == 'div' : les voisins à distance k ont un poids r/k
         Si part == 'equal' : les voisins ont tous le même poids
@@ -1540,7 +1591,61 @@ def generate_Extended_PBN(BN, i_modifs = None, p_ref = 0.8, dist = 1, part = 'po
 
 
 
-def generate_Random_PBN(m, n, k, indep, sync = True, p = 0, q = .1):
+def generatePBNfromGraph(neighs, m, indep, sync, p, q):
+    """ Génère un PBN à partir d'un graphe de régulation.
+        Annexe à generate_Random_PBN().
+    """
+
+    n = len(neighs)
+    n_vois = [len(neighs[i]) for i in range(n)]
+    varnames = init_vars(n)
+    if indep:
+        # Génération d'un F = F1 x ... x Fn,
+        # avec F_i les fonctions de transition possibles du i-ème gène.
+        functs = [[] for _ in range(n)]
+        if type(m)==int: # chaque gène a le même nombre m de fonctions
+            for i in range(n):
+                Lk = bit_list(n_vois[i])
+                symbols = [varnames[j] for j in neighs[i]]
+                for j in range(m):
+                    functs[i].append(random_BoolFunc(Lk, symbols, varnames, i))
+            c = [[1 / m for _ in range(m)] for _ in range(n)]
+
+        else: # un noeud i a m[i] fonctions
+            if len(m)!=n:
+                raise ValueError("La liste m doit être de longueur n.")
+            for i in range(n):
+                Lk = bit_list(n_vois[i])
+                symbols = [varnames[j] for j in neighs[i]]
+                for j in range(m[i]):
+                    functs[i].append(random_BoolFunc(Lk, symbols, varnames, i))
+            c = [[1 / (m[i]) for _ in range(m[i])] for i in range(n)]
+
+    else: # Génération d'un F = [f_1, ..., f_m], avec f_i un contexte.
+        if type(m)==list:
+            raise ValueError("Merci d'entrer un m entier ou indep=True.")
+        functs = [[] for _ in range(m)]
+        for j in range(m):
+            for i in range(n):
+                Lk = bit_list(n_vois[i])
+                symbols = [varnames[j] for j in neighs[i]]
+                functs[j].append(random_BoolFunc(Lk, symbols, varnames, i))
+        c = [1 / m for _ in range(m)]
+
+    s_indep = 'indep'*indep
+    return PBN(title = f'Synthetic {s_indep} ({m},{n},{max(n_vois)})-PBN',
+               n = n,
+               indep = indep,
+               f = functs,
+               c = c,
+               sync = sync,
+               p = p,
+               q = q,
+               regulation = (neighs,),
+               varnames = varnames)
+
+
+def generate_Random_PBN(m, n, k, v = False, indep = False, sync = True, p = 0, q = .1):
     """Construit un PBN dont chacun des n nœuds est régulé par k voisins
         et m fonctions équiprobables à tables de vérité générées aléatoirement.
 
@@ -1563,60 +1668,9 @@ def generate_Random_PBN(m, n, k, indep, sync = True, p = 0, q = .1):
     if k > n or k<=0:
         raise ValueError("Merci d'entrer un 0 < k < n.")
 
-    # Sélection des voisins de chaque gène
-    flag = True
-    while flag: # on fait que le graphe de régulation soit connexe
-        nodes = [i for i in range(n)]
-        neighs = [sorted(random.sample(nodes, k)) for i in range(n)]
-        edges = [(j, i) for i in nodes for j in neighs[i]]
-        G = nx.Graph()
-        G.add_nodes_from(nodes)
-        G.add_edges_from(edges)
-        flag = not nx.is_connected(G)
+    neighs = generateGraph(n, k, v)
 
-    varnames = init_vars(n)
-
-    Lk = bit_list(k)
-    if indep:
-        # Génération d'un F = F1 x ... x Fn,
-        # avec F_i les fonctions de transition possibles du i-ème gène.
-        functs = [[] for _ in range(n)]
-        if type(m)==int: # chaque gène a le même nombre m de fonctions
-            for i in range(n):
-                symbols = [varnames[j] for j in neighs[i]]
-                for j in range(m):
-                    functs[i].append(random_BoolFunc(Lk, symbols, varnames, i))
-            c = [[1 / m for _ in range(m)] for _ in range(n)]
-
-        else: # un noeud i a m[i] fonctions
-            if len(m)!=n:
-                raise ValueError("La liste m doit être de longueur n.")
-            for i in range(n):
-                symbols = [varnames[j] for j in neighs[i]]
-                for j in range(m[i]):
-                    functs[i].append(random_BoolFunc(Lk, symbols, varnames, i))
-            c = [[1 / (m[i]) for _ in range(m[i])] for i in range(n)]
-
-    else: # Génération d'un F = [f_1, ..., f_m], avec f_i un contexte.
-        if type(m)==list:
-            raise ValueError("Merci d'entrer un m entier ou indep=True.")
-        functs = [[] for _ in range(m)]
-        for j in range(m):
-            for i in range(n):
-                symbols = [varnames[j] for j in neighs[i]]
-                functs[j].append(random_BoolFunc(Lk, symbols, varnames, i))
-        c = [1 / m for _ in range(m)]
-
-    return PBN(title = f'Synthetic ({m},{n},{k})-PBN',
-               n = n,
-               indep = indep,
-               f = functs,
-               c = c,
-               sync = sync,
-               p = p,
-               q = q,
-               regulation = (neighs,),
-               varnames = varnames)
+    return generatePBNfromGraph(neighs, m, indep, sync, p, q)
 
 
 

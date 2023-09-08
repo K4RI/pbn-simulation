@@ -154,7 +154,7 @@ def test_syntheticBN(n, k):
         gasync.stationary_law(T = 20, N = 5, R = 50, show_all = False)
 
 
-def test_syntheticPBN(m, n, k, indep):
+def test_syntheticPBN(m, n, k):
     gs = [generate_Random_PBN([m,1,m,1], n, k, indep = True, sync = True,
                                                              p = 0, q = .1),
           generate_Random_PBN(m, n, k, indep = False, sync = True,
@@ -162,6 +162,7 @@ def test_syntheticPBN(m, n, k, indep):
 
     for g in gs:
         print(g)
+        g.regulation_graph()
         g.simulation(10, verb = True)
         g.STG_PBN()
         g.copy_PBN(sync = False).STG_PBN()
@@ -224,8 +225,8 @@ test_claudine()
 # BN synthétique à n noeuds et k voisins : STG, loi
 test_syntheticBN(4,2)
 
-# PBN synthétique à n noeuds et m contextes : STG
-test_syntheticPBN(2, 4, 1, indep = False)
+PBN synthétique à n noeuds et m contextes : STG
+test_syntheticPBN(2, 4, 2)
 
 # Divers exemples de conversion entre objets PBN et fichiers .pbn
 test_filesPBN()
@@ -240,5 +241,20 @@ test_extended_PBN()
 #     for fij in pbn_ext.fcts[i]:
 #         print(i, to_dnf(fij))
 
+for f in [True, False]:
+    g = generateGraph(4, 2, v = True)
+    bn = generateBNfromGraph(g, f = f, sync = True, p = 0)
+    if not f:
+        pbn_rand = generatePBNfromGraph(g, 3, indep = False, sync = True, p = 0, q = .1)
+    pbn_ext = generate_Extended_PBN(bn, p_ref = 0.8, dist = 1, part = 'poly', q = 1)
+
+    bn.STG()
+    if not f: pbn_rand.STG_PBN()
+    pbn_ext.STG_PBN()
+
+    #stationary_law2(...)
+
+
 #TODO : test_claudine(q) avec 0<q<1
-#TODO : bn = generateBN() -> pbn_ext = generate_Extended_PBN() -> stationary_law2(pbn_ext)
+
+#TODO : pbn = generate_Random_PBN(2, 3, 2, indep = False, q=1); pbn.STG(pbn.fcts[0]); pbn.STG(pbn.fcts[1]); pbn.STG_PBN()

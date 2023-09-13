@@ -2,6 +2,8 @@ import psutil
 import subprocess
 # On peut lancer par :
 proc = subprocess.Popen(["java", "-jar", "functionhood/target/FunctionHood-0.1.jar"], stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
+##
+
 
 # Et le couper par :
 psutil.Process(proc.pid).children()[0].terminate()

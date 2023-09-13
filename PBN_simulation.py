@@ -11,6 +11,7 @@ import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
+import os
 import pandas as pd
 from py4j.java_gateway import JavaGateway
 import random
@@ -443,10 +444,10 @@ s_fcts, s_ctxtbls, str(self.c), str(self.x), s_ctxt, s_ctxtbl)
                                             for f in ff]) for ff in F]))
         return s
 
-    def str_functs(self) -> list:
+    def str_functs(self) -> str:
         """Table des expressions des fonctions de régulation."""
 
-        print('\n\n'.join(['\n'.join([str(f) for f in ff]) for ff in self.fcts]))
+        return '\n\n'.join(['\n'.join([str(f) for f in ff]) for ff in self.fcts])
 
 
 
@@ -606,7 +607,7 @@ s_fcts, s_ctxtbls, str(self.c), str(self.x), s_ctxt, s_ctxtbl)
             self.step(verb)
 
 
-    def stationary_law(self, show_all = True, T = 100, N = 200, R = 100,
+    def stationary_law(self, show_all = False, T = 100, N = 200, R = 100,
                        pre = False, prio_attrs = []):
         """Affiche, sous forme d'un diagramme en barre, la loi stationnaire
         empirique de la chaîne de Markov associée au PBN.
@@ -658,6 +659,7 @@ s_fcts, s_ctxtbls, str(self.c), str(self.x), s_ctxt, s_ctxtbl)
             bins = bit_list_str(self.n)
             df = df.reindex(bins, fill_value = 0)
         df = df.sort_index()
+        print(df)
         color = len(df) * ['blue']
         plot_blue = mpatches.Patch(color = 'blue', label = 'Fréquence')
 
@@ -944,8 +946,10 @@ s_fcts, s_ctxtbls, str(self.c), str(self.x), s_ctxt, s_ctxtbl)
         scc = [x for x in scc]
         attractors = [x for x in scc
                       if x==set().union(*(G.neighbors(n) for n in x))]
-        print('\nAttracteurs :')
-        for a in attractors: print(a)
+
+        if pre != 2:
+            print('\nAttracteurs :')
+            for a in attractors: print(a)
 
         # Coloriage des attracteurs dans le graphe
         # Rouge états stables, jaune attracteurs larges, gris états transients
@@ -972,6 +976,12 @@ s_fcts, s_ctxtbls, str(self.c), str(self.x), s_ctxt, s_ctxtbl)
         if pre==2:
             return G, attractors
 
+        def roundd(x,n):
+            r = round(x,n)
+            if r==1:
+                return 1
+            return r
+
         if plot_attrs:
             for k in range(len(attractors)):
                 if 2 <= len(attractors[k]) <= 2**self.n-1:
@@ -985,7 +995,7 @@ s_fcts, s_ctxtbls, str(self.c), str(self.x), s_ctxt, s_ctxtbl)
                             edgecolors = 'k', font_size = 7, node_size = 500,
                             node_color = [colors[k]])
                     if (not self.sync) or self.pbn:
-                        edge_labels2 = dict([((u,v,), round(d['weight'], 3))
+                        edge_labels2 = dict([((u,v,), roundd(d['weight'], 3))
                                             for u,v,d in G2.edges(data = True)])
                         nx.draw_networkx_edge_labels(G2, pos,
                                                      edge_labels = edge_labels2,
@@ -998,7 +1008,7 @@ s_fcts, s_ctxtbls, str(self.c), str(self.x), s_ctxt, s_ctxtbl)
         nx.draw(G, pos = pos, with_labels=True, node_shape="s", edgecolors='k',
                 font_size=7, node_size=500, node_color=color_map)
         if ((not self.sync) or self.pbn) and draw_labels:
-            edge_labels = dict([((u,v,), round(d['weight'], 3))
+            edge_labels = dict([((u,v,), roundd(d['weight'], 3))
                                 for u,v,d in G.edges(data=True)])
             nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels,
                                          font_size=7)
@@ -1016,6 +1026,7 @@ s_fcts, s_ctxtbls, str(self.c), str(self.x), s_ctxt, s_ctxtbl)
                    handler_map = {list: HandlerTuple(None)})
 
         plt.show()
+        return attractors
 
 
     def regulation_graph(self, layout = nx.spring_layout):
@@ -1068,6 +1079,14 @@ s_fcts, s_ctxtbls, str(self.c), str(self.x), s_ctxt, s_ctxtbl)
         if filename == None :
             filename = self.title
 
+        if os.path.exists('output\\' + filename + '.pbn'):
+            ind = 1
+
+            while os.path.exists('output\\' + filename + str(ind) + '.pbn'):
+                ind+=1
+            filename = filename + str(ind)
+
+
         with open('output\\' + filename + '.pbn', 'w') as f:
             f.write(f'sync = {int(self.sync)}\n')
             f.write(f'p = {self.p}\n')
@@ -1111,7 +1130,7 @@ s_fcts, s_ctxtbls, str(self.c), str(self.x), s_ctxt, s_ctxtbl)
 
 
 
-def file_to_PBN(filename, title=None):
+def file_to_PBN(filename, title=None, regulated = False):
     """Crée un PBN à partir d'une description dans un fichier de forme :
     sync = (0 ou 1)
     p = (float entre 0 et 1)
@@ -1135,6 +1154,9 @@ def file_to_PBN(filename, title=None):
     filename : str
         Nom du fichier à charger. Chaque ligne est de la forme
         'nom_variable, fonction, proba_fonction'
+    regulated : bool
+        Si le réseau est de régulation signée, on parse les activateurs et
+        inhibiteurs à partir des expressions.
     args :
         Attributs par défaut du PBN décrits plus haut, s'ils ne sont pas
 
@@ -1241,6 +1263,25 @@ def file_to_PBN(filename, title=None):
 
     neighs = [sorted(neigh) for neigh in neighs]
 
+    # si on sait que le réseau a une régulation signée, on parse ces signes
+    if regulated:
+        activators, inhibitors = [[] for _ in range(n)], [[] for _ in range(n)]
+        for i in range(n):
+            if not indep:
+                fi = functs[0][i]
+            else:
+                fi = functs[i][0]
+            for j in neighs[i]:
+                if str_signed(varnames[j], fi)[0] != '~':
+                    activators[i].append(j)
+                else:
+                    inhibitors[i].append(j)
+        regulation = (activators, inhibitors)
+
+    else:
+        regulation = (neighs,)
+
+
     return PBN(title = title,
                n = n,
                indep = indep,
@@ -1250,7 +1291,7 @@ def file_to_PBN(filename, title=None):
                p = p,
                q = q,
                varnames = varnames,
-               regulation = (neighs,),
+               regulation = regulation,
                zeroes = zeroes, ones = ones)
 
 
@@ -1295,10 +1336,15 @@ def generateGraph(n, k, v):
         G.add_nodes_from(nodes)
         G.add_edges_from(edges)
         flag = not nx.is_connected(G)
+
+    # for i in range(n):
+    #     print('%s -> %i' %(neighs[i], i))
+    # print()
+
     return neighs
 
 
-def generateBNfromGraph(neighs, f, sync, p):
+def generateBNfromGraph(neighs, f, sync, p, p_neg):
     """ Génère un BN à partir d'un graphe de régulation.
         Annexe à generateBN().
     """
@@ -1307,10 +1353,10 @@ def generateBNfromGraph(neighs, f, sync, p):
     n_vois = [len(neighs[i]) for i in range(n)]
     functs = []
     varnames = init_vars(n)
+
     # Pour chaque gène i de voisins i_1 ... i_ki,
     if f:
         # Détermination des régulations négatives et positives
-        p_neg = .5 # TODO: une proportion de régulations négatives ?
         signs = [[random.random() < p_neg for _ in range(n_vois[i])]
                   for i in range(n)]
         activators = [[neighs[i][j] for j in range(n_vois[i])
@@ -1345,8 +1391,6 @@ def generateBNfromGraph(neighs, f, sync, p):
             if not n_vois[i]:
                 n_vois[i] = 1
                 neighs[i] = [i]
-                signs[i] = [True]
-                activators[i] = [i]
                 functs.append(BoolFunc(eval(f'x{i}'), varnames))
             else:
                 Lk = bit_list(n_vois[i])
@@ -1368,7 +1412,7 @@ def generateBNfromGraph(neighs, f, sync, p):
 
 
 
-def generateBN(n, k, sync, v = False, f = False, p = 0):
+def generateBN(n, k, sync, v = False, f = False, p = 0, p_neg = 0.5):
     """Construit un BN dont chacun des n nœuds est régulé par k voisins ou moins.
 
     Parameters
@@ -1384,6 +1428,9 @@ def generateBN(n, k, sync, v = False, f = False, p = 0):
         Si False, les fonctions de régulation sont tirées au hasard.
         Si True, on tire des vecteurs de régulation +/-, et la fonction de
         régulation est celle par défaut (cf. Mendoza2006 équation 1).
+    p_neg : bool
+        Dans le cas f=True, la probabilité qu'un régulateur soit inhibiteur.
+        La probabilité qu'il active est alors de 1-p_neg.
     args (sync, p) :
         Attributs du PBN décrits plus haut.
 
@@ -1394,10 +1441,6 @@ def generateBN(n, k, sync, v = False, f = False, p = 0):
     #TODO : option canalyzing functions (x_i=u => f(x)=y) : f(x) = x_i ^/v h(x) ?
 
     neighs = generateGraph(n, k, v)
-
-    for i in range(n):
-        print('%s -> %i' %(neighs[i], i))
-    print()
 
     return generateBNfromGraph(neighs, f, sync, p)
 
@@ -1482,6 +1525,8 @@ def voisines(f, dist):
         Liste des listes de voisins à distance k, pour k de 1 à dist.
     """
 
+    d0, d1 = dist//10, dist%10
+
     for v in f.free_symbols:
         globals().__setitem__(str(v), v)
 
@@ -1492,23 +1537,38 @@ def voisines(f, dist):
     f_parents = voisines_direct({f}, 'p')
     f_enfants = voisines_direct({f}, 'c')
     f_voisines = [to_dnf_set(f_parents.union(f_enfants))]
+    if dist//10 == 1:
+        if dist == 11:
+            return [to_dnf_set(f_parents)]
+        elif dist == 12:
+            return [to_dnf_set(f_enfants)]
+        return f_voisines
 
-    if dist >= 2: # siblings
-        f_siblings = voisines_direct(f_parents, 'c').union(voisines_direct(f_enfants, 'p'))
-        try:
-            f_siblings.remove(fd)
-        except:
-            pass
-        f_voisines.append(to_dnf_set(f_siblings))
+    # siblings
+    f_siblings = voisines_direct(f_parents, 'c').union(voisines_direct(f_enfants, 'p'))
+    try:
+        f_siblings.remove(fd)
+    except:
+        pass
+    f_voisines.append(to_dnf_set(f_siblings))
+    if dist//10 == 2:
+        return f_voisines
 
-        if dist == 3: # grands-parents & petits-enfants
-            f_gppe = voisines_direct(f_parents, 'p').union(voisines_direct(f_enfants, 'c'))
-            f_voisines.append(to_dnf_set(f_gppe))
+    # grands-parents & petits-enfants
+    f_gparents = voisines_direct(f_parents, 'p')
+    f_penfants = voisines_direct(f_enfants, 'c')
+    f_gppe = f_penfants.union(f_gparents)
+    if dist == 31:
+        f_voisines.append(to_dnf_set(f_gparents))
+    elif dist == 32:
+        f_voisines.append(to_dnf_set(f_penfants))
+    else:
+        f_voisines.append(to_dnf_set(f_gppe))
 
     return f_voisines
 
 
-def generate_Extended_PBN(BN, i_modifs = None, p_ref = 0.8, dist = 1, part = 'poly', q = 1):
+def generate_Extended_PBN(BN, i_modifs = None, p_ref = 0.8, dist = 10, part = 'poly', q = 1):
     """Construit un PBN à partir des fonctions de référence d'un BN, étendues
     parmi leurs voisines dans le diagramme de Hasse.
 
@@ -1522,9 +1582,13 @@ def generate_Extended_PBN(BN, i_modifs = None, p_ref = 0.8, dist = 1, part = 'po
         Probabilité associée à la fonction de référence.
     dist :
         Distance maximale à explorer dans le diagramme de Hasse.
-        Si dist == 1 : explorer les parents + les enfants des fonctions.
-        Si dist == 2 : précédents + les siblings.
-        Si dist == 3 : précédents + les grands-parents + les petits-enfants.
+        10 : parents + enfants
+        11 : parents
+        12 : enfants
+        20 : parents + enfants + siblings
+        30 : parents + enfants + siblings + grands-parents + petits-enfants
+        31 : parents + enfants + siblings + grands-parents
+        32 : parents + enfants + siblings + petits-enfants
     part :
         Type de partitionnement des voisins en fonction de la distance.
         Si part == 'poly' : les voisins à distance k ont un poids r**k
@@ -1535,6 +1599,7 @@ def generate_Extended_PBN(BN, i_modifs = None, p_ref = 0.8, dist = 1, part = 'po
     -------
     PBN
     """
+
 
     if i_modifs == None:
         i_modifs = [i for i in range(BN.n)]
@@ -1550,6 +1615,7 @@ def generate_Extended_PBN(BN, i_modifs = None, p_ref = 0.8, dist = 1, part = 'po
 
         if i in i_modifs:
             f_voisines = voisines(BNi.rep, dist)
+            dis = dist//10
             fcts_pbn[i] = [BNi] + [BoolFunc(v, BN.varnames) for v in flatten(f_voisines)]
 
             ns = [len(v) for v in f_voisines]
@@ -1558,15 +1624,15 @@ def generate_Extended_PBN(BN, i_modifs = None, p_ref = 0.8, dist = 1, part = 'po
                 if part == 'poly':
                     # On détermine le r tel que les voisins à distance k auront un poids r**k
                     x = var('x')
-                    sols = solve(Eq(sum([ns[i]*x**(i+1) for i in range(dist)]), 1),x)
+                    sols = solve(Eq(sum([ns[i]*x**(i+1) for i in range(dis)]), 1),x)
                     r = max(list(filter(lambda x: 'I' not in str(x), sols)))
-                    for k in range(dist):
+                    for k in range(dis):
                         c_pbn[i] += [round((1-p_ref) * r**(k + 1), 6)] * ns[k]
 
                 if part == 'div':
                     # On détermine le r tel que les voisins à distance k auront un poids r/k
-                    r = 1/(sum([ns[k] / (k + 1) for k in range(dist)]))
-                    for k in range(dist):
+                    r = 1/(sum([ns[k] / (k + 1) for k in range(dis)]))
+                    for k in range(dis):
                         c_pbn[i] += [round((1-p_ref) * r/(k + 1), 6)] * ns[k]
 
                 if part == 'equal':

@@ -19,7 +19,7 @@ def ex_toymodel():
     #                q = 0,
     #                varnames = varnames)
 
-    file_to_PBN('examples\\toymodel.pbn')
+    toymodel = file_to_PBN('examples\\toymodel.pbn')
     print(toymodel)
     toymodel.simulation(10, verb = True)
     toymodel.stationary_law(T = 100, N = 25, R = 200)
@@ -101,7 +101,8 @@ def test_claudine(q=1):
     fonctions de référence dans le diagramme de Hasse.
     Cf. Cury2019, Mendoza2006."""
 
-    for name in ['Table0_p08.bnet',
+    for name in [
+                 'Table0_p08.bnet',
                  'Table1A_fAll_d1_p08.bnet',
                  'Table1B_fAll_d1_p08_siblings.bnet',
                  'Table1C_fGATA3_p08.bnet',
@@ -110,20 +111,18 @@ def test_claudine(q=1):
                  'Table1F_fIL4R_p08.bnet'
                  ]:
 
-        if name == 'Table0_p08.bnet':
-            filename = 'Experiments_Th_model\Table0_p08.bnet'
-            zeroes, ones = [-1, -2, -3, -4], [] # <----------
+        # if name == 'Table0_p08.bnet':
+        #     filename = 'Experiments_Th_model\Table0_p08.bnet'
+        #     zeroes, ones = [-1, -2, -3, -4], [] # <----------
+        #
+        #     # Mendoza page 15 : "IFN-β, IL-12, IL-18 and TCR do not have inputs [...], treated as constants [...] having a value of 0"
+        # else:
+        #     filename = "Experiments_Th_model\simul_prob_original\\" + name
+        #     zeroes, ones = [i for i in range(23) if i != 2], [2] # <----------
+        #     # P-O 6.2 : "Starting from an initial state, in which all the components are inactive but IFNg"
+        #     # dans Mendoza fig 3, activer IFNg fait bouger de Th0 à Th1
 
-            # Mendoza page 15 : "IFN-β, IL-12, IL-18 and TCR do not have inputs [...], treated as constants [...] having a value of 0"
-        else:
-            filename = "Experiments_Th_model\simul_prob_original\\" + name
-            zeroes, ones = [i for i in range(23) if i != 2], [2] # <----------
-            # P-O 6.2 : "Starting from an initial state, in which all the components are inactive but IFNg"
-            # dans Mendoza fig 3, activer IFNg fait bouger de Th0 à Th1
-
-        # zeroes, ones = [], []
-        zeroes, ones = [-1, -2, -3, -4], []
-        # zeroes, ones = [i for i in range(23) if i != 2], [2]
+        zeroes, ones = [i for i in range(23) if i != 2], [2]
 
         def approach_attrs(x):
             if x[0] == '1':
@@ -135,13 +134,13 @@ def test_claudine(q=1):
         pbn_claudine = file_to_PBN(filename = filename)
         pbn_claudine.zeroes = zeroes
         pbn_claudine.ones = ones
-        pbn_claudine.stationary_law()
-        pbn_claudine.copy_PBN(sync = False).stationary_law()
+        # pbn_claudine.stationary_law()
+        # pbn_claudine.copy_PBN(sync = False).stationary_law()
 
-        # pbn_claudine.stationary_law2(approach_attrs = approach_attrs,
-        #                         attr_colors = [(0,255,0), (255,0,0), (0,0,255)],
-        #                         attr_names = ['Th0', 'Th1', 'Th2'],
-        #                         T = 20, R = 1000)
+        pbn_claudine.stationary_law2(approach_attrs = approach_attrs,
+                                attr_colors = [(0,255,0), (255,0,0), (0,0,255)],
+                                attr_names = ['Th0', 'Th1', 'Th2'],
+                                T = 30, R = 1000)
 
 
 
@@ -210,7 +209,7 @@ def test_extended_PBN():
         print(bn)
         bn.regulation_graph()
         bn.PBN_to_file()
-        pbn_ext = generate_Extended_PBN(bn, i_modifs=None, p_ref=0.8, dist=2, q=1)
+        pbn_ext = generate_Extended_PBN(bn, i_modifs=None, p_ref=0.8, dist=20, q=1)
         print(pbn_ext)
         pbn_ext.PBN_to_file()
 
@@ -247,61 +246,30 @@ test_extended_PBN()
 #     for fij in pbn_ext.fcts[i]:
 #         print(i, to_dnf(fij))
 
-g = generateGraph(4, 2, v = False)
-for f in [False, True]:
-    if f: print('\n----- signé')
-    else: print('\n----- non-signé')
-    bn = generateBNfromGraph(g, f = f, sync = True, p = 0)
-    bn.regulation_graph()
-    if not f:
-        pbn_rand = generatePBNfromGraph(g, 3, indep = False, sync = True, p = 0, q = .1)
-    pbn_ext = generate_Extended_PBN(bn, p_ref = 0.8, dist = 1, part = 'poly', q = 1)
-
-    print('\nbn :'); bn.STG()
-    if not f:
-        print('\npbn random :'); pbn_rand.STG_PBN()
-    print('\npbn extended :'); pbn_ext.STG_PBN()
-
-    #stationary_law2(...)
-
 
 #TODO : test_claudine(q) avec 0<q<1
 
-#TODO : pbn = generate_Random_PBN(2, 3, 2, indep = False, q=1); pbn.STG(pbn.fcts[0]); pbn.STG(pbn.fcts[1]); pbn.STG_PBN()
 
-##
+def valid_BNs(c1, c2, dist, thres = 4000):
+    for t in range(thres):
+        bn = generateBN(4, 3, sync = True, v = True, f = True, p = 0)
+        a1 = bn.STG(pre=2)[1]
+        if c1(a1):
+            pbn_ext = generate_Extended_PBN(bn, p_ref = 0.6, dist = dist, part = 'div', q = 1)
+            a2 = pbn_ext.STG_PBN(pre=2)[1]
+            if c2(a1,a2):
+                print('%i essais' %t)
+                return bn, pbn_ext
+    raise Exception("Nombre d'itérations dépassé")
 
-colors_def = [(0,0,255), (0,255,0), (255,0,0), (255,255,0), (0,255,255), (255,0,255)]
+bn, pbn_ext = valid_BNs(# c1 = lambda att: all([len(a)==1 for a in att]) and len(att)==4, # 4 pts fixes
+                        c1 = lambda att: all([len(a)==1 for a in att]) and len(att)==2, # 2 pts fixes
+                        c2 = lambda att: all([len(a)==1 for a in att]) and len(att)==1, # 3 pts fixes
+                        # c2 = lambda att: any([len(a)==2 for a in att]), # un attracteur de taille 2
+                        # c2 = lambda a1, a2: any([len(a)>=2 for a in a2]) and (set().union(*a2)).issubset(set().union(*a1)), # un attracteur de taille 2
+                        # c2 = lambda a1, a2: True,
+                        dist=12)
 
-def fct_attrs(att):
-    if not all([len(a)==1 for a in att]):
-        raise Exception('pas tous des points stables')
-    pts = [next(iter(s)) for s in att]
-    approach_attrs = lambda x: (''.join(map(str, x)), pts.index(''.join(map(str, x))))
-    # attr_colors = [tuple([random.randint(0,255) for _ in range(3)]) for _ in pts]
-    attr_colors = colors_def[:len(pts)]
-    attr_names = pts
-    return approach_attrs, attr_colors, attr_names
-
-##
-
-flag = True
-essai, thres = 0, 4000
-while flag:
-    if essai > thres: raise Exception("nombre d'essais excédé")
-    essai += 1
-    if essai%50==0: print(essai)
-    # bn = generateBN(5, 3, sync = True, v = False, f = True, p = 0)
-    bn = generateBN(4, 3, sync = True, v = True, f = True, p = 0)
-    a1 = bn.STG(pre=2)[1]
-    if True: # on veut qu'il n'y ait que 3 points fixes
-        pbn_ext = generate_Extended_PBN(bn, p_ref = 0.6, dist = 10, part = 'div', q = 1)
-        a2 = pbn_ext.STG_PBN(pre=2)[1]
-        flag = False
-        # flag = (a1 != a2)
-        # flag = (len(a2) != 3)
-
-print('%i essais' %essai)
 bn.regulation_graph()
 print('------- BN')
 print(bn.str_functs())
@@ -315,38 +283,58 @@ a2 = pbn_ext.STG_PBN()
 bn.PBN_to_file('bn')
 pbn_ext.PBN_to_file('pbn')
 
-
 ##
-i = 12
 
-if i==0:
-    bn = file_to_PBN('output\\bn.pbn', regulated = True)
-    pbn_ext = file_to_PBN('output\\pbn.pbn')
-else:
-    bn = file_to_PBN('output\\bn%i.pbn'%i, regulated = True)
-    pbn_ext = file_to_PBN('output\\pbn%i.pbn'%i)
+def prev_gen_bns(i):
+    if i==0:
+        bn = file_to_PBN('output\\bn.pbn', regulated = True)
+        pbn_ext = file_to_PBN('output\\pbn.pbn')
+    else:
+        bn = file_to_PBN('output\\bn%i.pbn'%i, regulated = True)
+        pbn_ext = file_to_PBN('output\\pbn%i.pbn'%i)
+
+    return bn, pbn_ext
+
+
+bn, pbn_ext = prev_gen_bns(i=12)
 
 bn.regulation_graph()
 bn.STG()
 pbn_ext.STG_PBN()
-pbn_ext2.STG_PBN()
 # bn.copy_PBN(sync = False).STG()
 # pbn_ext.copy_PBN(sync = False).STG_PBN()
-#
+
 ##
-R = 1000
 
-a1 = bn.STG(pre=2)[1]
-approach_attrs, attr_colors, attr_names = fct_attrs(a1)
-bn.copy_PBN(sync = True).stationary_law2(approach_attrs, attr_colors, attr_names, T=25, R=R)
-pbn_ext = generate_Extended_PBN(bn, p_ref = 0.6, dist = 12, part = 'div', q = 1)
-pbn_ext.copy_PBN(sync = True).stationary_law2(approach_attrs, attr_colors, attr_names, T=25, R=R)
+def fct_attrs(att):
+    colors_def = [(0,0,255), (0,255,0), (255,0,0), (255,255,0), (0,255,255), (255,0,255)]
+    dic = {x: i for i in range(len(att)) for x in att[i]}
+    # attr_colors = [tuple([random.randint(0,255) for _ in range(3)]) for _ in pts]
+    attr_colors = colors_def[:len(att)]
+    attr_names = []
+    for a in att:
+        if len(a)==1: attr_names.append(next(iter(a)))
+        else: attr_names.append('{' + ', '.join(a) + '}')
+    approach_attrs = lambda x: (attr_names[dic[''.join(map(str, x))]], dic[''.join(map(str, x))])
+    return approach_attrs, attr_colors, attr_names
 
-pbn_ext2 = generate_Extended_PBN(bn, p_ref = 0.6, dist = 31, part = 'div', q = 1)
-pbn_ext2.stationary_law2(approach_attrs, attr_colors, attr_names, T=200, R=R)
+def setlist_union(a, b):
+    c = a.copy()
+    for x in b:
+        if x not in c:
+            c.append(x)
+    return c
 
+def simuls(bn, pbn_ext, R=1000):
+    R = 1000
+    a1 = bn.STG(pre=2)[1]
+    a2 = pbn_ext.STG(pre=2)[1]
+    att = setlist_union(a1,a2)
+    approach_attrs, attr_colors, attr_names = fct_attrs(att)
+
+    bn.copy_PBN(sync = True).stationary_law2(approach_attrs, attr_colors, attr_names, T=25, R=R)
+    pbn_ext.copy_PBN(sync = True).stationary_law2(approach_attrs, attr_colors, attr_names, T=400, R=R)
+
+simuls(bn, pbn_ext)
 print('----------')
-
-
-
 

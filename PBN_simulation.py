@@ -593,18 +593,26 @@ s_fcts, s_ctxtbls, str(self.c), str(self.x), s_ctxt, s_ctxtbl)
         # L'état suivant est tiré parmi les successeurs de x
         ss = self.succ(self.x, self.currentfct_vector)
         self.x = random.choice(ss)
-        if verb:
+        if verb==2:
+            print([[self.varnames[i] for i in range(self.n) if x[i]] for x in ss])
+            print('Appel de la fonction   : [%s]' %str([self.varnames[i] for i in range(self.n) if self.x[i]]))
+        elif verb:
             print('Appel de la fonction   :  %s -> %s' %(str(x0), str(self.x)))
-            if x0==self.x:
-                print('--->> État stable <<---')
 
 
     def simulation(self, N, verb = False):
         """Simulation N étapes du PBN."""
 
+        self.init_state()
+
         for i in range(1, N+1):
             if verb: print('__________\n\nÉTAPE %i' %i)
+            x0=self.x.copy()
             self.step(verb)
+            if x0==self.x:
+                print('--->> État stable, étape %i <<---' %i)
+                break
+
 
 
     def stationary_law(self, show_all = False, T = 100, N = 200, R = 100,
@@ -821,13 +829,23 @@ s_fcts, s_ctxtbls, str(self.c), str(self.x), s_ctxt, s_ctxtbl)
             self.init_state()
             for t in range(T):
                 self.step()
+
             # Aux termes des premières itérations,
             # on ne s'arrête qu'à l'état stable
-            x_prec = None
-            while x_prec != self.x:
-                x_prec = self.x.copy()
-                self.step()
-            xs = ''.join(map(str,self.x))
+            # x_prec = None
+            # while x_prec != self.x:
+            #     x_prec = self.x.copy()
+            #     self.step()
+            # xs = ''.join(map(str,self.x))
+
+            flag = True
+            while flag:
+                try:
+                    xs = ''.join(map(str,self.x))
+                    flag = False
+                except:
+                    self.step()
+
             attr, col = approach_attrs(xs)
             sim.append(attr)
             cols.append(col)
@@ -1442,7 +1460,7 @@ def generateBN(n, k, sync, v = False, f = False, p = 0, p_neg = 0.5):
 
     neighs = generateGraph(n, k, v)
 
-    return generateBNfromGraph(neighs, f, sync, p)
+    return generateBNfromGraph(neighs, f, sync, p, p_neg)
 
 
 def str_signed(v, f):

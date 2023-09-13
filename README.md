@@ -3,7 +3,7 @@ Une classe Python permettant de construire analyser et simuler des réseaux de r
 
 ### Prérequis
 
-Logiciel(s) nécessaires au fonctionnement du projet : Python 3
+Logiciel(s) nécessaires au fonctionnement du projet : Java 1.8, Python 3
 
 ```python
 pip install matplotlib, networkx, numpy, pandas

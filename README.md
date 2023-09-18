@@ -6,7 +6,7 @@ Une classe Python permettant de construire analyser et simuler des réseaux de r
 Logiciel(s) nécessaires au fonctionnement du projet : Java 1.8, Python 3
 
 ```python
-pip install matplotlib, networkx, numpy, pandas
+pip install matplotlib, networkx, numpy, pandas, py4j
 ```
 
 ## Structure du dossier de travail
@@ -48,14 +48,13 @@ Un fichier script importe la classe et ses fonctions annexes :
 ```python
 from PBN_simulation import *
 ```
+Si l'on souhaite employer `generate_Extended_PBN()`, inclure les lignes `start_FH()` et `stop_FH()` en début et fin, afin d'appeler le module Java 'Functionhood'.
 
 ### Construire un réseau booléen probabiliste
-Un objet PBN peut être créé en parcourant un fichier décrivant ses attributs et ses contextes (`file_to_PBN()`), ou en génération aléatoire (`generateBN()`, `generate_Random_PBN()` pouvant fixer leurs attributs).
+Un objet PBN peut être créé en parcourant un fichier décrivant ses attributs et ses contextes (`file_to_PBN()`), ou en génération aléatoire (`generateBN()`, `generate_Random_PBN()` pouvant fixer leurs attributs), ou par extension aux fonctions voisines d'un BN existant (`generate_Extended_PBN()`).
 
 ### Analyser
 *(cf. Méthodes)*
 
 ### Sauvegarder
-Parallèlement à la fonction de lecture de fichier, il est possible de sauvegarder un PBN dans un fichier de même syntaxe (`self.PBN_to_file()`). Les fonctions booléennes y sont consignées en expressions DNF.
-
-
+Parallèlement à la fonction de lecture de fichier, il est possible de sauvegarder un PBN dans un fichier de même syntaxe (`self.PBN_to_file()`). Le fichier est introduit par les attributs du réseau (`sync`, `p`, `q`, `init`, `indep`), puis les fonctions booléennes y sont consignées en expressions DNF. Voir exemples dans le dossier *output/*.

@@ -219,7 +219,7 @@ def valid_BNs(c1, c2, dist, p_ref = 0.6, thres = 4000):
         Condition voulue sur l'ensemble des attracteurs du PBN des fonctions voisines.
     dist : int
         Distance d'extension entre le BN et le PBN (cf. arguments de generate_Extended_PBN()).
-    p_ref : int
+    p_ref : float
         Probabilité associée aux fonctions de référence.
     thres : int
         Seuil maximum d'itérations avant de stopper la recherche.

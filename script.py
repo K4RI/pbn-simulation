@@ -1,51 +1,22 @@
 from PBN_simulation import *
 
 
+## I : EXEMPLES DE MODÈLES
+# Les fichiers les décrivant sont dans 'examples/' ou dans 'Experiments_Th_model/'
+
 def ex_toymodel():
     """Toy model présenté dans l'article d'AbouJaoudé2006."""
 
-    # varnames = init_vars(4)
-    # f0 = BoolFunc(x1 | x3, varnames)
-    # f1 = BoolFunc(x0 & x3 | x2, varnames)
-    # f2 = BoolFunc(~x0 & ~x3, varnames)
-    # f3 = BoolFunc(x3, varnames)
-    # toymodel = PBN(title = 'Toy model',
-    #                n = 4,
-    #                indep = False,
-    #                f = [[f0, f1, f2, f3]],
-    #                c = [1],
-    #                sync = True,
-    #                p = 0,
-    #                q = 0,
-    #                varnames = varnames)
-
     toymodel = file_to_PBN('examples\\toymodel.pbn')
     print(toymodel)
-    toymodel.simulation(10, verb = True)
-    toymodel.stationary_law(T = 100, N = 25, R = 200)
-    toymodel.STG()
-    toymodel.copy_PBN(sync = False).STG()
+    # toymodel.simulation(10, verb = True)
+    toymodel.stationary_law(T = 100, N = 2000, R = 2000, show_all=True)
+    # toymodel.STG()
+    # toymodel.copy_PBN(sync = False).STG()
 
 
 
 def ex_shmulevich2001():
-    """Toy model présenté dans l'article de Shmulevich2001."""
-
-    # varnames = init_vars(3)
-    # f0_0 = BoolFunc(x1 | x2, varnames)
-    # f0_1 = BoolFunc((x1 | x2) & (~((~x0) & x1 & x2)), varnames)
-    # f1_0 = BoolFunc((x0 | x1 | x2) & (x0 | (~x1) | (~x2)) & ((~x0) | (~x1) | x2), varnames)
-    # f2_0 = BoolFunc((x0 & (x1 | x2)) | ((~x0) & x1 & x2), varnames)
-    # f2_1 = BoolFunc(x0 & x1 & x2, varnames)
-    # examplePBN = PBN(title = 'Shmulevich PBN',
-    #                  n = 3,
-    #                  indep = True,
-    #                  f = [[f0_0, f0_1], [f1_0], [f2_0, f2_1]],
-    #                  c = [[0.6, 0.4], [1], [0.5, 0.5]],
-    #                  sync = True,
-    #                  p = 0,
-    #                  q = 1,
-    #                  varnames = varnames)
 
     examplePBN = file_to_PBN('examples\\examplePBN.pbn')
     print(examplePBN)
@@ -58,30 +29,9 @@ def ex_shmulevich2001():
 def ex_mammaliancellcycle():
     """Modèle biologique étudié dans Fauré2006."""
 
-    # varnames = init_vars(10)
-    # f0 = BoolFunc(x0, varnames)
-    # f1 = BoolFunc(((~x4) & (~x9) & (~x0) & (~x3)) | (x5 & (~x9) & (~x0)), varnames)
-    # f2 = BoolFunc(((~x1) & (~x4) & (~x9)) | (x5 & (~x1) & (~x9)), varnames)
-    # f3 = BoolFunc((x2 & (~x1)), varnames)
-    # f4 = BoolFunc((x2 & (~x1) & (~x6) & (~(x7 & x8))) | (x4 & (~x1) & (~x6) & (~(x7 & x8))), varnames)
-    # f5 = BoolFunc(((~x0) & (~x3) & (~x4) & (~x9)) | (x5 & (~(x3 & x4)) & (~x9) &(~x0)), varnames)
-    # f6 = BoolFunc(x9, varnames)
-    # f7 = BoolFunc(((~x4) & (~x9)) | (x6) | (x5 & (~x9)), varnames)
-    # f8 = BoolFunc((~x7) | (x7 & x8 & (x6 | x4 | x9)), varnames)
-    # f9 = BoolFunc((~x6) & (~x7), varnames)
-    # cellcycle = PBN(title = 'Mammalian cell cycle',
-    #                 n = 10,
-    #                 indep = False,
-    #                 f = [[f0, f1, f2, f3, f4, f5, f6, f7, f8, f9]],
-    #                 c = [1],
-    #                 sync = True,
-    #                 p = 0,
-    #                 q = 0,
-    #                 varnames = varnames)
-
     cellcycle = file_to_PBN('examples\\cellcycle.pbn')
     cellcycle.simulation(8, verb = True)
-    cellcycle.stationary_law(T=200, N=500, R=500, show_all = False)
+    cellcycle.stationary_law(T=200, N=1000, R=1000, show_all = False)
 
     prio_attrs = ["1000100000", "1000101111", "1000001010", "1000000010",
                   "1000000110", "1000000100", "1010000100", "1010100100",
@@ -93,6 +43,20 @@ def ex_mammaliancellcycle():
              .stationary_law(T=200, N=500, R=500, show_all = False,
                              prio_attrs = prio_attrs)
 
+
+def ex_zhou():
+    """Toy model présenté dans l'article de zhou2016."""
+
+    zhou = file_to_PBN('examples\\zhou.pbn')
+    print(zhou)
+    zhou.simulation(10, verb = True)
+    zhou.stationary_law(T = 100, N = 200, R = 200, show_all=True)
+    zhou.STG()
+    zhou.copy_PBN(sync = False).STG()
+
+    zhoupbn = file_to_PBN('examples\\zhoupbn.pbn')
+    zhoupbn.STG_PBN()
+    zhoupbn.STG_allPBN()
 
 
 def test_claudine(q=1):
@@ -111,16 +75,17 @@ def test_claudine(q=1):
                  'Table1F_fIL4R_p08.bnet'
                  ]:
 
-        # if name == 'Table0_p08.bnet':
-        #     filename = 'Experiments_Th_model\Table0_p08.bnet'
-        #     zeroes, ones = [-1, -2, -3, -4], [] # <----------
-        #
-        #     # Mendoza page 15 : "IFN-β, IL-12, IL-18 and TCR do not have inputs [...], treated as constants [...] having a value of 0"
-        # else:
-        #     filename = "Experiments_Th_model\simul_prob_original\\" + name
-        #     zeroes, ones = [i for i in range(23) if i != 2], [2] # <----------
-        #     # P-O 6.2 : "Starting from an initial state, in which all the components are inactive but IFNg"
-        #     # dans Mendoza fig 3, activer IFNg fait bouger de Th0 à Th1
+        if name == 'Table0_p08.bnet':
+            filename = 'Experiments_Th_model\Table0_p08.bnet'
+
+            # zeroes, ones = [-1, -2, -3, -4], []
+            # Mendoza page 15 : "IFN-β, IL-12, IL-18 and TCR do not have inputs [...], treated as constants [...] having a value of 0"
+
+        else:
+            filename = "Experiments_Th_model\simul_prob_original\\" + name
+            # zeroes, ones = [i for i in range(23) if i != 2], [2]
+            # P-O 6.2 : "Starting from an initial state, in which all the components are inactive but IFNg"
+            # dans Mendoza fig 3, activer IFNg fait bouger de Th0 à Th1
 
         zeroes, ones = [i for i in range(23) if i != 2], [2]
 
@@ -134,15 +99,15 @@ def test_claudine(q=1):
         pbn_claudine = file_to_PBN(filename = filename)
         pbn_claudine.zeroes = zeroes
         pbn_claudine.ones = ones
-        # pbn_claudine.stationary_law()
-        # pbn_claudine.copy_PBN(sync = False).stationary_law()
 
         pbn_claudine.stationary_law2(approach_attrs = approach_attrs,
                                 attr_colors = [(0,255,0), (255,0,0), (0,0,255)],
                                 attr_names = ['Th0', 'Th1', 'Th2'],
-                                T = 30, R = 1000)
+                                T = 2000, R = 1000)
 
 
+
+## II : TESTS DES FONCTIONNALITÉS
 
 def test_syntheticBN(n, k):
 
@@ -240,33 +205,50 @@ test_filesPBN()
 test_extended_PBN()
 
 
-##
+## III :
 
-# for i in range(len(pbn_ext.fcts)):
-#     for fij in pbn_ext.fcts[i]:
-#         print(i, to_dnf(fij))
+def valid_BNs(c1, c2, dist, p_ref = 0.6, thres = 4000):
+    """ Génère un BN et son PBN des fonctions voisines tels que leurs attracteurs
+        respectent des conditions.
 
+    Parameters
+    ----------
+    c1 : function
+        Condition voulue sur l'ensemble des attracteurs du BN.
+    c2 : function
+        Condition voulue sur l'ensemble des attracteurs du PBN des fonctions voisines.
+    dist : int
+        Distance d'extension entre le BN et le PBN (cf. arguments de generate_Extended_PBN()).
+    p_ref : int
+        Probabilité associée aux fonctions de référence.
+    thres : int
+        Seuil maximum d'itérations avant de stopper la recherche.
 
-#TODO : test_claudine(q) avec 0<q<1
+    Returns
+    -------
+    PBN
+    """
 
-
-def valid_BNs(c1, c2, dist, thres = 4000):
     for t in range(thres):
-        bn = generateBN(4, 3, sync = True, v = True, f = True, p = 0)
+        bn = generateBN(4, 4, sync = True, v = True, f = True, p = 0, p_neg = 0.8)
         a1 = bn.STG(pre=2)[1]
         if c1(a1):
-            pbn_ext = generate_Extended_PBN(bn, p_ref = 0.6, dist = dist, part = 'div', q = 1)
+            pbn_ext = generate_Extended_PBN(bn, p_ref = p_ref, dist = dist, part = 'div', q = 1)
+
             a2 = pbn_ext.STG_PBN(pre=2)[1]
             if c2(a1,a2):
                 print('%i essais' %t)
                 return bn, pbn_ext
     raise Exception("Nombre d'itérations dépassé")
 
-bn, pbn_ext = valid_BNs(# c1 = lambda att: all([len(a)==1 for a in att]) and len(att)==4, # 4 pts fixes
-                        c1 = lambda att: all([len(a)==1 for a in att]) and len(att)==2, # 2 pts fixes
-                        c2 = lambda att: all([len(a)==1 for a in att]) and len(att)==1, # 3 pts fixes
-                        # c2 = lambda att: any([len(a)==2 for a in att]), # un attracteur de taille 2
-                        # c2 = lambda a1, a2: any([len(a)>=2 for a in a2]) and (set().union(*a2)).issubset(set().union(*a1)), # un attracteur de taille 2
+
+bn, pbn_ext = valid_BNs(c1 = lambda att: all([len(a)==1 for a in att]) and len(att)==4, # 4 pts fixes
+                        # c1 = lambda att: all([len(a)==1 for a in att]) and len(att)==2, # 2 pts fixes
+                        # c1 = lambda att: all([len(a)==1 for a in att]) and len(att)==1, # 1 pt fixe
+
+                        # c2 = lambda att, att2: all([len(a)==1 for a in att2]) and len(att)==1, # 1 pts fixes
+                        c2 = lambda att, att2: any([len(a)==2 for a in att2]), # un attracteur de taille 2
+                        # c2 = lambda att, att2: any([len(a)>=2 for a in att2]) and (set().union(*att2)).issubset(set().union(*att)), # un attracteur de taille 2, et l'union des attracteurs est incluse dans l'autre
                         # c2 = lambda a1, a2: True,
                         dist=12)
 
@@ -280,12 +262,19 @@ a2 = pbn_ext.STG_PBN()
 
 
 ##
-bn.PBN_to_file('bn')
-pbn_ext.PBN_to_file('pbn')
+
+def save_models():
+    """ Sauvegarde dans 'output/' les modèles crées par valid_BNs()."""
+    bn.PBN_to_file('bn')
+    pbn_ext.PBN_to_file('pbn')
+
+save_models()
+
 
 ##
 
 def prev_gen_bns(i):
+    """ Récupère les modèles précédemment sauvegardés dans 'output/'. """
     if i==0:
         bn = file_to_PBN('output\\bn.pbn', regulated = True)
         pbn_ext = file_to_PBN('output\\pbn.pbn')
@@ -303,6 +292,7 @@ bn.STG()
 pbn_ext.STG_PBN()
 # bn.copy_PBN(sync = False).STG()
 # pbn_ext.copy_PBN(sync = False).STG_PBN()
+
 
 ##
 
@@ -326,15 +316,15 @@ def setlist_union(a, b):
     return c
 
 def simuls(bn, pbn_ext, R=1000):
+    """ Compare les attracteurs atteints par le BN et le PBN des fonctions voisines. """
     R = 1000
     a1 = bn.STG(pre=2)[1]
-    a2 = pbn_ext.STG(pre=2)[1]
+    a2 = pbn_ext.STG_PBN(pre=2)[1]
     att = setlist_union(a1,a2)
     approach_attrs, attr_colors, attr_names = fct_attrs(att)
 
     bn.copy_PBN(sync = True).stationary_law2(approach_attrs, attr_colors, attr_names, T=25, R=R)
-    pbn_ext.copy_PBN(sync = True).stationary_law2(approach_attrs, attr_colors, attr_names, T=400, R=R)
+    pbn_ext.copy_PBN(sync = True).stationary_law2(approach_attrs, attr_colors, attr_names, T=1000, R=R)
 
 simuls(bn, pbn_ext)
 print('----------')
-

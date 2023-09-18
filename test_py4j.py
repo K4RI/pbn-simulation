@@ -1,14 +1,3 @@
-import psutil
-import subprocess
-# On peut lancer par :
-proc = subprocess.Popen(["java", "-jar", "functionhood/target/FunctionHood-0.1.jar"], stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
-##
-
-
-# Et le couper par :
-psutil.Process(proc.pid).children()[0].terminate()
-subprocess.run(["stop_jar.bat"])#, stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
-
 ## Test du lancement de functionhood depuis Python (1)
 
 from py4j.java_gateway import JavaGateway

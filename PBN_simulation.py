@@ -13,11 +13,28 @@ import networkx as nx
 import numpy as np
 import os
 import pandas as pd
+import psutil
 from py4j.java_gateway import JavaGateway
 import random
+import subprocess
+import time
+
 
 
 ########### PARTIE 1 / 3 - UTILITY FUNCTIONS ##########
+
+def start_FH():
+    """ Débute le programme Java de recherche de fonctions voisines.
+        Nécessaire pour generate_Extended_PBN(). """
+    subprocess.run(["stop_jar.bat"], stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
+    subprocess.Popen(["java", "-jar", "functionhood/target/FunctionHood-0.1.jar"], stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
+    time.sleep(1)
+
+
+def stop_FH():
+    """ Termine le programme Java susmentionné. """
+    subprocess.run(["stop_jar.bat"], stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
+
 
 def init_vars(n: int):
     """Initialise les variables x0, ..., x_{n-1}."""
@@ -611,7 +628,8 @@ s_fcts, s_ctxtbls, str(self.c), str(self.x), s_ctxt, s_ctxtbl)
             self.step(verb)
             if x0==self.x:
                 print('--->> État stable, étape %i <<---' %i)
-                break
+                # break
+                # ne pas break !! même si c'est stable de ce contexte, ça peut ne pas l'être d'un autre !!!
 
 
 
@@ -742,11 +760,13 @@ s_fcts, s_ctxtbls, str(self.c), str(self.x), s_ctxt, s_ctxtbl)
                             classes.append([df.index[i]])
                 print('\nLes %i classes supposées sont : ' %len(classes))
                 for c in classes:
-                    size = round(sum(df['Fréquence'][c]) * 2**(self.n))
-                    #TODO : marge d'erreur à 95%
-                    freq100 = 100 * sum(df['Fréquence'][c])
-                    print('%s : bassin de taille %i (%.1f %%)' \
-                        %(str(c), size, freq100))
+                    pA = sum(df['Fréquence'][c])
+                    error_rel = 1.96 * sqrt(pA)*sqrt(1-pA)/sqrt(R) + (len(c)+1/sqrt(R))/N # marge d'erreur à 95%
+                    size = round(pA * 2**(self.n))
+                    error_abs = round(error_rel * 2**(self.n))
+
+                    print('%s : bassin de taille %i ± %i (%.2f ± %.2f %%)' \
+                        %(str(c), size, error_abs, 100*pA, 100*error_rel))
 
         plt.subplots_adjust(bottom = 0.03 + 0.02 * self.n)
         plt.show()
@@ -955,7 +975,28 @@ s_fcts, s_ctxtbls, str(self.c), str(self.x), s_ctxt, s_ctxtbl)
         return self.post_process_STG(G, layout, pre, plot_attrs, draw_labels)
 
 
-    def post_process_STG(self, G, layout, pre, plot_attrs, draw_labels):
+    def STG_allPBN(self, layout = nx.spring_layout, plot_attrs = False,
+                draw_labels = True):
+
+        if not self.indep:
+            for i in range(len(self.fcts)):
+                Gf = self.STG(f = self.fcts[i], pre = 1)
+                self.post_process_STG(Gf, layout, plot_attrs, draw_labels, pre=0, plot=0)
+
+        else:
+            Fc = [[(self.fcts[i][j], self.c[i][j])
+                    for j in range(len(self.fcts[i]))]
+                    for i in range(len(self.fcts))]
+            for fc in itertools.product(*Fc):
+                F = [f[0] for f in fc] # le contexte
+                c = prod([f[1] for f in fc]) # le poids du contexte
+                Gf = self.STG(f = F, pre = 1)
+                self.post_process_STG(Gf, layout, 0, plot_attrs, draw_labels, plot=0)
+
+        plt.show()
+
+
+    def post_process_STG(self, G, layout, pre, plot_attrs, draw_labels, plot=1):
         """ Fonction annexe à STG() et STG_PBN().
         Traite le graphe G : calcule colorie ses attracteurs, et s'affiche."""
 
@@ -965,7 +1006,7 @@ s_fcts, s_ctxtbls, str(self.c), str(self.x), s_ctxt, s_ctxtbl)
         attractors = [x for x in scc
                       if x==set().union(*(G.neighbors(n) for n in x))]
 
-        if pre != 2:
+        if pre != 2 and plot:
             print('\nAttracteurs :')
             for a in attractors: print(a)
 
@@ -1043,7 +1084,8 @@ s_fcts, s_ctxtbls, str(self.c), str(self.x), s_ctxt, s_ctxtbl)
                    labels = ['Attracteurs', 'États transients'],
                    handler_map = {list: HandlerTuple(None)})
 
-        plt.show()
+        if plot:
+            plt.show()
         return attractors
 
 
@@ -1509,7 +1551,7 @@ def voisines_direct(F, cp):
         try:
             hd = gateway.entry_point.initHasseDiagram(len(symbs))
         except:
-            raise IOError("Merci de lancer FunctionHood-0.1.jar")
+            raise IOError("Merci de lancer au préalable FunctionHood-0.1.jar : 'start_FH()'.")
 
         if cp == 'c':
             a = gateway.entry_point.getFormulaChildrenfromStr(formula, False)
@@ -1665,7 +1707,6 @@ def generate_Extended_PBN(BN, i_modifs = None, p_ref = 0.8, dist = 10, part = 'p
             fcts_pbn[i] = [BNi]
             c_pbn[i] = [1]
 
-
     if len(i_modifs) == BN.n:
         mods = 'allv'
     else:
@@ -1760,7 +1801,6 @@ def generate_Random_PBN(m, n, k, v = False, indep = False, sync = True, p = 0, q
 
 #TODO : autre version du code avec appels Py4J sur le getAttractors de BioLQM ?
 
-#TODO : rédiger la démo sur |BOA| merde
 #TODO : en non-déterministe (async et PBN), le seuil T pour assez d'attracteurs ?
 
 #TODO : approximation et calcul du MFPT

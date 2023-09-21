@@ -1,7 +1,7 @@
 from PBN_simulation import *
 
 
-## I : EXEMPLES DE MODÈLES
+# ## I : EXEMPLES DE MODÈLES
 # Les fichiers les décrivant sont dans 'examples/' ou dans 'Experiments_Th_model/'
 
 def ex_toymodel():
@@ -49,31 +49,33 @@ def ex_zhou():
 
     zhou = file_to_PBN('examples\\zhou.pbn')
     print(zhou)
-    zhou.simulation(10, verb = True)
-    zhou.stationary_law(T = 100, N = 200, R = 200, show_all=True)
-    zhou.STG()
-    zhou.copy_PBN(sync = False).STG()
+    # zhou.simulation(10, verb = True)
+    zhou.stationary_law(T = 100, N = 200, R = 1000, show_all=True)
+    # zhou.STG()
+    # zhou.copy_PBN(sync = False).STG()
+    #
+    # zhoupbn = file_to_PBN('examples\\zhoupbn.pbn')
+    # zhoupbn.STG_PBN()
+    # zhoupbn.STG_allPBN()
 
-    zhoupbn = file_to_PBN('examples\\zhoupbn.pbn')
-    zhoupbn.STG_PBN()
-    zhoupbn.STG_allPBN()
 
-
-def test_claudine(q=1):
+def test_claudine(q=1, inds=[0,1,2,3,4,5,6]):
     """Calcule la prévalence des attracteurs Th0 Th1 Th2 dans le modèle
     Th_23, ainsi que dans ses extensions comportant les voisines des
     fonctions de référence dans le diagramme de Hasse.
     Cf. Cury2019, Mendoza2006."""
 
-    for name in [
-                 'Table0_p08.bnet',
-                 'Table1A_fAll_d1_p08.bnet',
-                 'Table1B_fAll_d1_p08_siblings.bnet',
-                 'Table1C_fGATA3_p08.bnet',
-                 'Table1D_fTbet_p08.bnet',
-                 'Table1E_fIL4_p08.bnet',
-                 'Table1F_fIL4R_p08.bnet'
-                 ]:
+    models = ['Table0_p08.bnet',
+              'Table1A_fAll_d1_p08.bnet',
+              'Table1B_fAll_d1_p08_siblings.bnet',
+              'Table1C_fGATA3_p08.bnet',
+              'Table1D_fTbet_p08.bnet',
+              'Table1E_fIL4_p08.bnet',
+              'Table1F_fIL4R_p08.bnet'
+             ]
+
+    for i in inds:
+        name = models[i]
 
         if name == 'Table0_p08.bnet':
             filename = 'Experiments_Th_model\Table0_p08.bnet'
@@ -100,14 +102,17 @@ def test_claudine(q=1):
         pbn_claudine.zeroes = zeroes
         pbn_claudine.ones = ones
 
+        pbn_claudine.stationary_law(T = 1000, N = 500, R = 100)
+        pbn_claudine.copy_PBN(sync=False).stationary_law(T = 1000, N = 500, R = 100)
+
         pbn_claudine.stationary_law2(approach_attrs = approach_attrs,
                                 attr_colors = [(0,255,0), (255,0,0), (0,0,255)],
                                 attr_names = ['Th0', 'Th1', 'Th2'],
-                                T = 2000, R = 1000)
+                                T = 2000, R = 100)
 
 
 
-## II : TESTS DES FONCTIONNALITÉS
+# ## II : TESTS DES FONCTIONNALITÉS
 
 def test_syntheticBN(n, k):
 
@@ -205,7 +210,7 @@ test_filesPBN()
 test_extended_PBN()
 
 
-## III :
+## III : Modèles synthétiques conditionnés
 
 def valid_BNs(c1, c2, dist, p_ref = 0.6, thres = 4000):
     """ Génère un BN et son PBN des fonctions voisines tels que leurs attracteurs

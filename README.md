@@ -12,8 +12,10 @@ pip install matplotlib, networkx, numpy, pandas, py4j
 ## Structure du dossier de travail
 - **PBN_simulation.py** : définition des classes et des méthodes
 - **script.py** : exemple de script utilisant les méthodes de la classe (tests sur des exemples biologiques ou générés synthétiquement)
+- **examples/** : dossier contenant des exemples de fichiers .pbn
 - **output/** : dossier où sont consignées les sorties de PBN_to_file()
 - **Experiments_Th_model/** : dossier de travail sur l'extension des BN grâce au PO-Set des fonctions de régulation (par C. Chaouiya, cf. [Cury2019, section 6.2](https://arxiv.org/abs/1901.07623))
+- **functionhood/** : module Java aidant au calcul des voisins dans le PO-Set des fonctions de régulation, compilé dans *'target/FunctionHood-0.1.jar'* (par P. T. Monteiro, cf. [Cury2019](https://arxiv.org/abs/1901.07623))
 
 ## Présentation de la classe
 La classe PBN définie dans `PBN_simulation.py` instancie des objets représentant des réseaux booléens probabilistes (ou *PBN*), mais peut aussi manipuler en particulier des réseaux booléens (ou *BN*).
@@ -57,4 +59,4 @@ Un objet PBN peut être créé en parcourant un fichier décrivant ses attributs
 *(cf. Méthodes)*
 
 ### Sauvegarder
-Parallèlement à la fonction de lecture de fichier, il est possible de sauvegarder un PBN dans un fichier de même syntaxe (`self.PBN_to_file()`). Le fichier est introduit par les attributs du réseau (`sync`, `p`, `q`, `init`, `indep`), puis les fonctions booléennes y sont consignées en expressions DNF. Voir exemples dans le dossier *output/*.
+Parallèlement à la fonction de lecture de fichier, il est possible de sauvegarder un PBN dans un fichier de même syntaxe (`self.PBN_to_file()`). Le fichier est introduit par les attributs du réseau (`sync`, `p`, `q`, `init`, `indep`), puis les fonctions booléennes y sont consignées en expressions DNF. Voir exemples dans le dossier *examples/* ou *output/*.

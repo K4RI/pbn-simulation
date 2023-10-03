@@ -886,6 +886,37 @@ s_fcts, s_ctxtbls, str(self.c), str(self.x), s_ctxt, s_ctxtbl)
         return M, df
 
 
+
+    def stationary_law3(self, T = 100, N = 200, R = 100, layout = nx.spring_layout):
+
+        # Échantillon des paires visitées par la chaîne de Markov
+        sim = []
+        for i in range(R):
+            self.init_state()
+            for t in range(T):
+                self.step()
+            x1 = ''.join(map(str,self.x))
+            for t in range(N):
+                x0 = x1
+                self.step()
+                ''.join(map(str,self.x))
+                x1 = ''.join(map(str,self.x))
+                sim.append((x0,x1))
+
+        # Traitement et affichage des états parcourus
+        count = Counter(sim)
+        count = {i : count[i] / len(sim) for i in count}
+        df = pd.DataFrame.from_dict(count, orient = 'index',
+                                    columns = ['Fréquence'])
+        adj = set(sim)
+        print(adj)
+        print(df)
+        G = nx.DiGraph(adj)
+        self.post_process_STG(G, layout, pre=0, plot_attrs=True, draw_labels=False, plot=1)
+
+        return df
+
+
     def STG(self, f = None, layout = nx.spring_layout, pre = 0,
                             plot_attrs = True, draw_labels = True):
         """Affiche le graphe de transition d'états, représentant quelle et
@@ -1008,7 +1039,7 @@ s_fcts, s_ctxtbls, str(self.c), str(self.x), s_ctxt, s_ctxtbl)
 
         if pre != 2 and plot:
             print('\nAttracteurs :')
-            for a in attractors: print(a)
+            for a in attractors: print(len(a), a)
 
         # Coloriage des attracteurs dans le graphe
         # Rouge états stables, jaune attracteurs larges, gris états transients
@@ -1053,7 +1084,7 @@ s_fcts, s_ctxtbls, str(self.c), str(self.x), s_ctxt, s_ctxtbl)
                     nx.draw(G2, pos = pos, with_labels = True, node_shape = "s",
                             edgecolors = 'k', font_size = 7, node_size = 500,
                             node_color = [colors[k]])
-                    if (not self.sync) or self.pbn:
+                    if ((not self.sync) or self.pbn) and draw_labels:
                         edge_labels2 = dict([((u,v,), roundd(d['weight'], 3))
                                             for u,v,d in G2.edges(data = True)])
                         nx.draw_networkx_edge_labels(G2, pos,

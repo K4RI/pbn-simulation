@@ -10,7 +10,8 @@ def ex_toymodel():
     toymodel = file_to_PBN('examples\\toymodel.pbn')
     print(toymodel)
     # toymodel.simulation(10, verb = True)
-    toymodel.stationary_law(T = 100, N = 2000, R = 2000, show_all=True)
+    # toymodel.stationary_law(T = 100, N = 2000, R = 2000, show_all=True)
+    toymodel.stationary_law(T = 100, N = 200, R = 200, show_all=True)
     # toymodel.STG()
     # toymodel.copy_PBN(sync = False).STG()
 
@@ -30,8 +31,10 @@ def ex_mammaliancellcycle():
     """Modèle biologique étudié dans Fauré2006."""
 
     cellcycle = file_to_PBN('examples\\cellcycle.pbn')
-    cellcycle.simulation(8, verb = True)
+    # cellcycle.simulation(8, verb = True)
     cellcycle.stationary_law(T=200, N=1000, R=1000, show_all = False)
+    cellcycle.stationary_law3(T = 150, N = 200, R = 200)
+    cellcycle.copy_PBN(sync = False).stationary_law3(T = 150, N = 400, R = 200)
 
     prio_attrs = ["1000100000", "1000101111", "1000001010", "1000000010",
                   "1000000110", "1000000100", "1010000100", "1010100100",
